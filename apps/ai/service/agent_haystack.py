@@ -4,10 +4,7 @@
 import logging
 import os
 # API and KEY set
-os.environ["OPENAI_API_KEY"] = "sk-proj-fmysrAZXJIzW3vWoRzuqT3BlbkFJVAm3xieMDVnRT5x5EJYp"
-os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-1f-8907da63-c79b-45e3-ab14-7402c9cc36ce"
-os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-00b8ff5f-6e6b-42a3-9bd2-65d49d5ff230"
-os.environ["LANGFUSE_HOST"] = "https://langfuse.bf-app.ch"
+# Enter API Here
 
 # Enable Haystack content tracing
 os.environ["HAYSTACK_CONTENT_TRACING _ENABLED"] = "False"
