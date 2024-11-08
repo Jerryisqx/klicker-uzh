@@ -769,6 +769,19 @@ Since the KlickerUZH app is not yet available on the iOS App Store, follow these
       sortBy: 'Sort by...',
       catalystRequired:
         'Requires catalyst access. For more information, see <link></link>.',
+      ai: 'AI Questions',
+      setLanguage: 'Choose Question Language',
+
+    },
+    aiRelate: {
+      welcomeMessage: 'Wecolem to KlickerUZH Questions Generate Page!',
+      numQuestion: 'Choose Number of Question, or LUCK if unsure',
+      genCap: 'Generate Question',
+      generatedQuestions: 'The AI-powered Questions',
+      unknownType: 'Working....',
+      fileUpload: 'Upload a file for generating:',
+      chooseType:'Choose Type of Question, or LUCK if unsure',
+      random: 'LUCK',
     },
     support: {
       modalTitle: 'Support KlickerUZH',

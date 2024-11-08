@@ -4,10 +4,13 @@
 import logging
 import os
 # API and KEY set
-# Enter API Here
+os.environ["OPENAI_API_KEY"] = "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"
+os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-1f-8907da63-c79b-45e3-ab14-7402c9cc36ce"
+os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-00b8ff5f-6e6b-42a3-9bd2-65d49d5ff230"
+os.environ["LANGFUSE_HOST"] = "https://langfuse.bf-app.ch"
 
 # Enable Haystack content tracing
-os.environ["HAYSTACK_CONTENT_TRACING _ENABLED"] = "False"
+os.environ["HAYSTACK_CONTENT_TRACING _ENABLED"] = "True"
 
 from pathlib import Path
 from getpass import getpass
@@ -328,6 +331,15 @@ class Agent():
         
         return response
     
+
+# def run_agent(pipeline,question):
+
+#     response = pipeline.run(
+#         {"text_embedder": {"text": question},
+#          "prompt_builder": {"question": question},
+#          "answer_builder": {"query": question},
+#          })
+#     return response
 
 # if __name__ == "__main__":
 #     input_doc = "data/test-doc.pdf"

@@ -195,6 +195,22 @@ export const Query = builder.queryType({
         },
       }),
 
+      //add new
+      latestNQuestions: asUser.field({
+        nullable: true,
+        type: [Element], 
+        args: {
+          limit: t.arg.int({ required: true }), 
+          },
+        resolve(_, { limit }, ctx) {
+          
+          return QuestionService.getLatestNQuestions({
+            ownerId: ctx.user.sub, // Filter by the current user's ID
+            limit,
+            }, ctx);
+        },
+      }),
+
       userCourses: asUser.field({
         nullable: true,
         type: [Course],

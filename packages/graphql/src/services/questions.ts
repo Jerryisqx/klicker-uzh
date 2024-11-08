@@ -91,6 +91,32 @@ export async function getUserQuestions(ctx: ContextWithUser) {
   return userQuestions?.questions
 }
 
+//Added new query function
+// Updated function to dynamically extract options based on type
+export async function getLatestNQuestions(
+  { ownerId, limit }: { ownerId: string; limit: number },
+  ctx: ContextWithUser
+) {
+  const questions = await ctx.prisma.elementGenerated.findMany({
+    where: {
+      ownerId: ownerId,
+      isDeleted: false, 
+    },
+    orderBy: {
+      createdAt: 'desc', // Fetch latest questions first
+    },
+    take: limit, 
+  });
+
+  return questions.map((question) => {
+    return {
+      ...question,
+      options: processElementOptions(question.type, question.options),
+    };
+  });
+
+}
+
 export async function getSingleQuestion(
   { id }: { id: number },
   ctx: ContextWithUser

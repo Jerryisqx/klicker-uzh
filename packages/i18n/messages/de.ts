@@ -767,6 +767,19 @@ Da die KlickerUZH-App noch nicht im iOS-App-Store verfügbar ist, folgen Sie die
       sortBy: 'Sortieren nach..',
       catalystRequired:
         'Catalyst-Zugriff erforderlich. Mehr Informationen unter <link></link>.',
+      ai: 'AI Fragen',
+      setLangauage: 'Sprache der Frage wahlen',
+
+    },
+    aiRelate: {
+      welcomeMessage: 'Willkommen bei KlickerUZH Fragen Generieren Seite!',
+      numQuestion: 'Wählen Sie die Nummer der Frage, oder LUCK, wenn Sie unsicher sind',
+      genCap: 'Frage Generieren',
+      generatedQuestions: 'Die KI-gesteuerten Fragen',
+      unknownType: 'Arbeiten....',
+      fileUpload: 'Laden Sie eine Datei zun Generieren hoch:',
+      chooseType:'Wählen Sie die Art der Frage, oder LUCK, wenn Sie unsicher sind',
+      random: 'LUCK',
     },
     support: {
       modalTitle: 'Support KlickerUZH',

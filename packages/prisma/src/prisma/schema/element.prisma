@@ -64,6 +64,45 @@ model Element {
   @@unique([ownerId, originalId])
 }
 
+//Added New
+model ElementGenerated {
+  id Int @id @default(autoincrement())
+
+  version Int @default(1) // used to track question versions, incremented on each update
+
+  originalId String?
+
+  isArchived Boolean @default(false)
+  isDeleted  Boolean @default(false)
+
+  name        String
+  content     String // markdown content
+  explanation String? // markdown content
+
+  pointsMultiplier Int @default(1) // currently only relevant for FLASHCARD and QUESTION types
+
+  /// [PrismaElementOptions]
+  options Json
+
+  status ElementStatus @default(READY)
+  type   ElementType
+
+  tags Tag[] @relation("ElementGeneratedTags")
+
+  instances QuestionInstance[] @relation("ElementGeneratedInstances")
+  elementInstances ElementInstance[] @relation("ElementGeneratedElementInstances")
+  feedbacks ElementFeedback[] @relation("ElementGeneratedFeedbacks")
+
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  ownerId String @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([ownerId, originalId])
+  @@map("ElementGenerated")
+}
+
 enum ElementInstanceType {
   LIVE_QUIZ
   PRACTICE_QUIZ
@@ -102,6 +141,10 @@ model ElementInstance {
 
   element        Element      @relation(fields: [elementId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   elementId      Int
+  //Added new
+  generatedQuestion ElementGenerated? @relation("ElementGeneratedElementInstances", fields: [elementGeneratedId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  elementGeneratedId Int?
+  
   elementStack   ElementStack @relation(fields: [elementStackId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   elementStackId Int
   owner          User         @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -230,6 +273,10 @@ model QuestionInstance {
 
   question   Element? @relation(fields: [questionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   questionId Int?
+  //Added new
+  generatedQuestion ElementGenerated? @relation("ElementGeneratedInstances", fields: [generateQuestionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  generateQuestionId Int?
+
   owner      User     @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   ownerId    String   @db.Uuid
 
@@ -253,6 +300,7 @@ model Tag {
   originalId String?
 
   questions Element[]
+  generatedQuestions ElementGenerated[] @relation("ElementGeneratedTags")   //Added new
 
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   ownerId String @db.Uuid

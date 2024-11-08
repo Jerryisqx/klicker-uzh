@@ -45,7 +45,14 @@ function Header({ user }: HeaderProps): React.ReactElement {
       label: t('manage.general.courses'),
       active: router.pathname == '/courses',
       cy: 'courses',
+    },    
+    {
+      href: '/ai',
+      label: t('manage.general.ai'),
+      active: router.pathname == '/ai',
+      cy: 'ai',
     },
+
   ]
 
   return (

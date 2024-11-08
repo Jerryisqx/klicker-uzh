@@ -99,6 +99,8 @@ model User {
   accounts          Account[]
   courses           Course[]
   questions         Element[]
+  //Added new
+  generatedElements ElementGenerated[] // <-- Added new
   mediaFiles        MediaFile[]
   tags              Tag[]
   questionInstances QuestionInstance[]
