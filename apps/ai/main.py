@@ -1,36 +1,39 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from typing import List
 import random
 import logging
 import psycopg2
+import psycopg2.extras
 import re
 import json
 import uuid
-import datetime
+from datetime import datetime
 from agent_haystack import PreProcess, Agent
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
-origins = [
-    "http://localhost:8000",
-    "http://127.0.1:8000"
-]
+# CORS 配置：允许来自前端的跨域请求
+# origins = [
+#     "http://localhost:8000",
+#     "http://127.0.0.1:8000"
+# ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # 允许的来源
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+    allow_methods=["*"],  # 允许所有方法
+    allow_headers=["*"],  # 允许所有头部
 )
 
-# # 请求体模型
+# 请求体模型
 class GenerateQuestionsRequest(BaseModel):
-    limit: str = None
-    language: str = None
+    limit: int
+    language: str
+
 
 def db_connect():
     try:
@@ -122,14 +125,13 @@ def insert_questions_to_db(connection, questions):
         logging.error(f"Error inserting questions into the database: {e}")
         raise
 
-# @app.route('/generate', methods=['POST'])
 @app.post('/generate')
 async def generate_questions(request: GenerateQuestionsRequest):
     # data = request.json
     # questions_number = data.get('questions_number', 5)
     # language = data.get('language', 'English')
-    language = request.language
     questions_number = request.limit
+    language = request.language
 
     db = None  # Initialize db_conn
 
@@ -165,8 +167,8 @@ async def generate_questions(request: GenerateQuestionsRequest):
     # Extract the generated questions as plain text
     generated_text = response['answer_builder']['answers'][0].data
 
-    with open('generate.txt', 'w') as f:
-        f.write(generated_text)
+    # with open('generate.txt', 'w') as f:
+    #     f.write(generated_text)
 
     # Log and print the generated text
     if not generated_text:
@@ -184,5 +186,3 @@ async def generate_questions(request: GenerateQuestionsRequest):
     return {"latestNQuestions": questions}
     # return jsonify({"questions": questions})
 
-# if __name__ == "main":
-#     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

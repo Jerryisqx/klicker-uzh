@@ -14,7 +14,6 @@ import {
     ElementType,
   } from '@klicker-uzh/graphql/dist/ops';
 
-
 export default function Home() {
     const t = useTranslations()
   
@@ -218,6 +217,7 @@ export default function Home() {
                                 className={{
                                     root: "block mb-2 text-sm font-semibold text-gray-700",
                                 }}
+
                                 items={[
                                     {
                                         value: ElementType.Content,
