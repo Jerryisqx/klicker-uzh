@@ -16,7 +16,6 @@ import {
 
 } from '@klicker-uzh/graphql/dist/ops';
 
-
 export default function Home() {
     const t = useTranslations()
 
@@ -24,9 +23,6 @@ export default function Home() {
     const [selectedQuestions, setSelectedQuestions] = useState<
             Record<number, Element | undefined>
     >({})
-
- 
-
 
     const selectedQuestionData = useMemo(
         () =>
@@ -37,6 +33,7 @@ export default function Home() {
         [selectedQuestions]
     )
   
+
     const [selectedType, setSelectedType] = useState();
     const [numQuestions, setNumQuestions] = useState<string>('2');
     const [difficultyLevel, setDifficultyLevel] = useState<string>();
@@ -118,6 +115,7 @@ export default function Home() {
     const handleTypeChange = (newValue: string) => {
         setSelectedType(newValue as ElementType);
     };
+
 
     return (
         <PageSourceProvider isGeneratedPage={true}> 
@@ -229,6 +227,7 @@ export default function Home() {
                                 className={{
                                     root: "block mb-2 text-sm font-semibold text-gray-700",
                                 }}
+
                                 items={[
                                     {
                                         value: "Content",
