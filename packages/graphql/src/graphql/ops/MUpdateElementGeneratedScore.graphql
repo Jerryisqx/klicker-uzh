@@ -1,0 +1,6 @@
+mutation UpdateElementGeneratedScore($id: Int!, $score: Int!) {
+  updateElementGeneratedScore(id: $id, score: $score) {
+    id
+    score
+  }
+}

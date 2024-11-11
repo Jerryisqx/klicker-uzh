@@ -195,6 +195,22 @@ export const Query = builder.queryType({
         },
       }),
 
+      //add new
+      latestNQuestions: asUser.field({
+        nullable: true,
+        type: [Element], 
+        args: {
+          limit: t.arg.int({ required: true }), 
+          },
+        resolve(_, { limit }, ctx) {
+          
+          return QuestionService.getLatestNQuestions({
+            ownerId: ctx.user.sub, // Filter by the current user's ID
+            limit,
+            }, ctx);
+        },
+      }),
+
       userCourses: asUser.field({
         nullable: true,
         type: [Course],
@@ -493,6 +509,17 @@ export const Query = builder.queryType({
         },
         resolve(_, args, ctx) {
           return QuestionService.getSingleQuestion(args, ctx)
+        },
+      }),
+
+      generatedQuestion: asUser.field({
+        nullable: true,
+        type: Element,
+        args: {
+          id: t.arg.int({ required: true }),
+        },
+        resolve(_, args, ctx) {
+          return QuestionService.getSingleGeneratedQuestion(args, ctx)
         },
       }),
 

@@ -380,6 +380,20 @@ export const Element = builder.unionType('Element', {
   },
 })
 
+//Add new three for manipulate the user score of generated question only
+export interface IElementGenerated {
+  id: number;
+  score: number;
+}
+export const ElementGeneratedRef = builder.objectRef<Pick<IElementGenerated, 'id' | 'score'>>('ElementGenerated');
+export const ElementGenerated = ElementGeneratedRef.implement({
+  fields: (t) => ({
+    id: t.exposeInt('id'),
+    score: t.exposeInt('score'),
+  }),
+});
+
+
 interface IArchivedElement {
   id: number
   isArchived: boolean

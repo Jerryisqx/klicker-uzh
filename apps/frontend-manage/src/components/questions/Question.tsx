@@ -14,13 +14,14 @@ import { twMerge } from 'tailwind-merge'
 // import QuestionDuplicationModal from './QuestionDuplicationModal'
 import { useMutation } from '@apollo/client'
 import { faCopy } from '@fortawesome/free-regular-svg-icons'
-import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faPencil, faTrash, faThumbsUp, faThumbsDown } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   DeleteQuestionDocument,
   ElementStatus,
   ElementType,
   GetUserQuestionsDocument,
+  UpdateElementGeneratedScoreDocument,
   Tag,
 } from '@klicker-uzh/graphql/dist/ops'
 import { Ellipsis } from '@klicker-uzh/markdown'
@@ -30,7 +31,10 @@ import ElementEditModal, {
   ElementEditMode,
 } from './manipulation/ElementEditModal'
 import QuestionTags from './QuestionTags'
+import { usePageSource } from 'src/pageContext/PageContext'
 // import QuestionTags from './QuestionTags'
+
+
 
 const StatusColors: Record<ElementStatus, string> = {
   [ElementStatus.Draft]: 'bg-slate-400',
@@ -102,6 +106,44 @@ function Question({
   const [deleteQuestion, { loading: deleting }] = useMutation(
     DeleteQuestionDocument
   )
+  const [updateScore] = useMutation(UpdateElementGeneratedScoreDocument)
+
+
+  //Determine which subpage we are in
+  const { isGeneratedPage } = usePageSource();
+  // Track button states
+  const [isGoodQuestionClicked, setIsGoodQuestionClicked] = useState(false);
+  const [isBadQuestionClicked, setIsBadQuestionClicked] = useState(false);
+  
+  // Toggle button and score
+  const handleGoodQuestionClick = async () => {
+    const newGoodState = !isGoodQuestionClicked;
+    setIsGoodQuestionClicked(newGoodState);
+    setIsBadQuestionClicked(false); // Reset Bad Question button
+    handleScoreUpdate(newGoodState ? 1 : 0);
+  };
+  
+  const handleBadQuestionClick = async () => {
+    const newBadState = !isBadQuestionClicked;
+      setIsBadQuestionClicked(newBadState);
+      setIsGoodQuestionClicked(false); // Reset Good Question button
+      handleScoreUpdate(newBadState ? -1 : 0);
+  };
+
+  const handleScoreUpdate = async (scoreValue: number) => {
+    try {
+      await updateScore({
+        variables: {
+          id, 
+          score: scoreValue,
+        },
+      })
+      console.log('Score updated successfully')
+    } catch (error) {
+      console.error('Error updating score:', error)
+    }
+  }
+  
 
   const [collectedProps, drag] = useDrag({
     item: {
@@ -201,7 +243,7 @@ function Question({
               <Button.Icon>
                 <FontAwesomeIcon icon={faPencil} />
               </Button.Icon>
-              <Button.Label>{t('shared.generic.edit')}</Button.Label>
+              <Button.Label>{isGeneratedPage ? t('shared.generic.preview') : t('shared.generic.edit')}</Button.Label>
             </Button>
             {isModificationModalOpen && (
               <ElementEditModal
@@ -211,38 +253,70 @@ function Question({
                 mode={ElementEditMode.EDIT}
               />
             )}
-            <Button
-              className={{
-                root: 'space-x-2 bg-white text-sm md:w-36 md:text-base',
-              }}
-              onClick={(): void => setIsDuplicationModalOpen(true)}
-              data={{ cy: `duplicate-question-${title}` }}
-            >
-              <Button.Icon>
-                <FontAwesomeIcon icon={faCopy} />
-              </Button.Icon>
-              <Button.Label>{t('shared.generic.duplicate')}</Button.Label>
-            </Button>
-            {isDuplicationModalOpen && (
-              <ElementEditModal
-                handleSetIsOpen={setIsDuplicationModalOpen}
-                isOpen={isDuplicationModalOpen}
-                questionId={id}
-                mode={ElementEditMode.DUPLICATE}
-              />
+            {/* Add user feedback*/}
+            {isGeneratedPage && (
+              <>
+              <Button 
+                onClick={handleGoodQuestionClick} 
+                className={{
+                  root:`space-x-2 ${
+                      isGoodQuestionClicked ? 'bg-green-200' : 'bg-white'
+                    } text-sm md:w-36 md:text-base`,}}>
+                <Button.Icon>
+                  <FontAwesomeIcon icon={faThumbsUp} />
+                </Button.Icon>
+                <Button.Label>{t('manage.aiRelate.goodQuestion')}</Button.Label>
+              </Button>
+              <Button 
+                onClick={handleBadQuestionClick} 
+                className={{
+                  root:`space-x-2 ${
+                      isBadQuestionClicked ? 'bg-red-200' : 'bg-white'
+                    } text-sm md:w-36 md:text-base`,}}>
+                <Button.Icon>
+                  <FontAwesomeIcon icon={faThumbsDown} />
+                </Button.Icon>
+                <Button.Label>{t('manage.aiRelate.badQuestion')}</Button.Label>
+              </Button>
+              </>
             )}
-            <Button
-              className={{
-                root: 'space-x-2 border-red-400 text-sm md:w-36 md:text-base',
-              }}
-              onClick={() => setIsDeletionModalOpen(true)}
-              data={{ cy: `delete-question-${title}` }}
-            >
-              <Button.Icon>
-                <FontAwesomeIcon icon={faTrash} />
-              </Button.Icon>
-              <Button.Label>{t('shared.generic.delete')}</Button.Label>
-            </Button>
+
+            {!isGeneratedPage && (
+              <>
+                <Button
+                  className={{
+                  root: 'space-x-2 bg-white text-sm md:w-36 md:text-base',
+                  }}
+                  onClick={(): void => setIsDuplicationModalOpen(true)}
+                  data={{ cy: `duplicate-question-${title}` }}
+                >
+                <Button.Icon>
+                  <FontAwesomeIcon icon={faCopy} />
+                </Button.Icon>
+                <Button.Label>{t('shared.generic.duplicate')}</Button.Label>
+                </Button>
+                {isDuplicationModalOpen && (
+                  <ElementEditModal
+                    handleSetIsOpen={setIsDuplicationModalOpen}
+                    isOpen={isDuplicationModalOpen}
+                    questionId={id}
+                    mode={ElementEditMode.DUPLICATE}
+                  />
+                )}
+                <Button
+                  className={{
+                  root: 'space-x-2 border-red-400 text-sm md:w-36 md:text-base',
+                  }}
+                  onClick={() => setIsDeletionModalOpen(true)}
+                  data={{ cy: `delete-question-${title}` }}
+                >
+                <Button.Icon>
+                  <FontAwesomeIcon icon={faTrash} />
+                </Button.Icon>
+                <Button.Label>{t('shared.generic.delete')}</Button.Label>
+                </Button>
+              </>
+            )}
             <Modal
               hideCloseButton
               onPrimaryAction={

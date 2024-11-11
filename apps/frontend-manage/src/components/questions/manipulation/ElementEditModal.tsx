@@ -11,6 +11,7 @@ import {
   ManipulateFreeTextQuestionDocument,
   ManipulateNumericalQuestionDocument,
   UpdateQuestionInstancesDocument,
+  GetSingleGeneratedQuestionDocument,
 } from '@klicker-uzh/graphql/dist/ops'
 import { Button, Modal } from '@uzh-bf/design-system'
 import { Form, Formik } from 'formik'
@@ -40,6 +41,7 @@ import OptionsLabel from './options/OptionsLabel'
 import SampleSolutionSetting from './options/SampleSolutionSetting'
 import useElementFormInitialValues from './useElementFormInitialValues'
 import useValidationSchema from './useValidationSchema'
+import { usePageSource } from 'src/pageContext/PageContext'
 
 export enum ElementEditMode {
   DUPLICATE = 'DUPLICATE',
@@ -61,6 +63,8 @@ function ElementEditModal({
   mode,
 }: ElementEditModalProps): React.ReactElement {
   // TODO: styling of tooltips - some are too wide
+  const { isGeneratedPage } = usePageSource(); //add to determine which page is at
+
   const t = useTranslations()
   const questionManipulationSchema = useValidationSchema()
 
@@ -69,13 +73,24 @@ function ElementEditModal({
   const [elementDataTypename, setElementDataTypename] =
     useState<ElementData['__typename']>('ChoicesElementData')
 
-  const { loading: loadingQuestion, data: dataQuestion } = useQuery(
-    GetSingleQuestionDocument,
+  const { loading: loadingQuestion, data: dataQuestion , error} = useQuery(
+    isGeneratedPage? GetSingleGeneratedQuestionDocument : GetSingleQuestionDocument, //using different query at different page
     {
       variables: { id: questionId! },
       skip: typeof questionId === 'undefined',
     }
   )
+
+  // adding console.log to debug
+  console.log("Is current page generated page:", isGeneratedPage);
+  console.log("what is the question ID now:", questionId);
+  console.log("show the data", dataQuestion);
+  console.log("check status - loading:", loadingQuestion, ", error:", error);
+  console.log("数据结构:", dataQuestion?.generatedQuestion);
+
+  if(error){
+    console.error("Error fetching question:", error);
+  }
 
   const [manipulateContentElement] = useMutation(
     ManipulateContentElementDocument
@@ -96,7 +111,7 @@ function ElementEditModal({
 
   const initialValues = useElementFormInitialValues({
     mode,
-    question: dataQuestion?.question,
+    question: isGeneratedPage ? dataQuestion?.generatedQuestion : dataQuestion?.question,
     isDuplication,
   })
 
@@ -116,7 +131,7 @@ function ElementEditModal({
         switch (values.type) {
           case ElementType.Content: {
             const args = prepareContentArgs({
-              questionId,
+              questionId: isGeneratedPage ? undefined : questionId,
               isDuplication,
               values,
             })
@@ -136,7 +151,7 @@ function ElementEditModal({
 
           case ElementType.Flashcard: {
             const args = prepareFlashcardArgs({
-              questionId,
+              questionId: isGeneratedPage ? undefined : questionId,
               isDuplication,
               values,
             })
@@ -158,7 +173,7 @@ function ElementEditModal({
           case ElementType.Mc:
           case ElementType.Kprim: {
             const args = prepareChoicesArgs({
-              questionId,
+              questionId: isGeneratedPage ? undefined : questionId,
               isDuplication,
               values,
             })
@@ -166,7 +181,7 @@ function ElementEditModal({
             const result = await manipulateChoicesQuestion({
               variables: args,
               refetchQueries: [
-                { query: GetUserQuestionsDocument },
+                { query: GetUserQuestionsDocument},
                 { query: GetUserTagsDocument },
               ],
             })
@@ -177,7 +192,7 @@ function ElementEditModal({
           }
           case ElementType.Numerical: {
             const args = prepareNumericalArgs({
-              questionId,
+              questionId: isGeneratedPage ? undefined : questionId,
               isDuplication,
               values,
             })
@@ -196,7 +211,7 @@ function ElementEditModal({
           }
           case ElementType.FreeText: {
             const args = prepareFreeTextArgs({
-              questionId,
+              questionId: isGeneratedPage ? undefined : questionId,
               isDuplication,
               values,
             })

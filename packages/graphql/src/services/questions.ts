@@ -91,6 +91,97 @@ export async function getUserQuestions(ctx: ContextWithUser) {
   return userQuestions?.questions
 }
 
+//Added new query function
+// Updated function to dynamically extract options based on type
+export async function getLatestNQuestions(
+  { ownerId, limit }: { ownerId: string; limit: number },
+  ctx: ContextWithUser
+) {
+  const questions = await ctx.prisma.elementGenerated.findMany({
+    where: {
+      ownerId: ownerId,
+      isDeleted: false, 
+    },
+    orderBy: {
+      createdAt: 'desc', // Fetch latest questions first
+    },
+    take: limit, 
+  });
+
+  return questions.map((question) => {
+    return {
+      ...question,
+      options: processElementOptions(question.type, question.options),
+    };
+  });
+
+}
+
+//manipulate the score of each generated questions
+export async function updateElementGeneratedScore(
+  { id, score }: { id: number; score: number },
+  ctx: ContextWithUser
+) {
+  return await ctx.prisma.elementGenerated.update({
+    where: {
+      id: id,
+      ownerId: ctx.user.sub,
+    },
+    data: {
+      score: score,
+    },
+  });
+}
+
+
+export async function getSingleGeneratedQuestion(
+  { id }: { id: number },
+  ctx: ContextWithUser
+) {
+  const question = await ctx.prisma.elementGenerated.findUnique({
+    where: {
+      id,
+      ownerId: ctx.user.sub,
+    },
+    include: {
+      tags: {
+        orderBy: {
+          order: 'asc',
+        },
+      },
+    },
+  })
+
+  if (!question) return null
+
+  let questionDataType: string
+  if (
+    question.type === DB.ElementType.SC ||
+    question.type === DB.ElementType.MC ||
+    question.type === DB.ElementType.KPRIM
+  ) {
+    questionDataType = 'ChoicesElementData'
+  } else if (question.type === DB.ElementType.NUMERICAL) {
+    questionDataType = 'NumericalElementData'
+  } else if (question.type === DB.ElementType.FREE_TEXT) {
+    questionDataType = 'FreeTextElementData'
+  } else if (question.type === DB.ElementType.FLASHCARD) {
+    questionDataType = 'FlashcardElementData'
+  } else {
+    questionDataType = 'ContentElementData'
+  }
+
+  return {
+    ...question,
+    questionData: {
+      ...question,
+      __typename: questionDataType,
+      id: `${question.id}-v${question.version}`,
+      questionId: question.id,
+    },
+  }
+}
+
 export async function getSingleQuestion(
   { id }: { id: number },
   ctx: ContextWithUser
