@@ -12,21 +12,15 @@ import type { Element } from '@klicker-uzh/graphql/dist/ops'
 import {
     GetLatestNQuestionsDocument,
     ElementType,
-    UpdateElementGeneratedScoreDocument,
-
-} from '@klicker-uzh/graphql/dist/ops';
+  } from '@klicker-uzh/graphql/dist/ops';
 
 
 export default function Home() {
     const t = useTranslations()
-
-    //const [selectedQuestions, setSelectedQuestions] = useState<Record<number, Element>>({});
+  
     const [selectedQuestions, setSelectedQuestions] = useState<
             Record<number, Element | undefined>
     >({})
-
- 
-
 
     const selectedQuestionData = useMemo(
         () =>
@@ -37,7 +31,7 @@ export default function Home() {
         [selectedQuestions]
     )
   
-    const [selectedType, setSelectedType] = useState();
+    const [selectedType, setSelectedType] = useState<string>();
     const [numQuestions, setNumQuestions] = useState<string>('2');
     const [difficultyLevel, setDifficultyLevel] = useState<string>();
     const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
@@ -112,11 +106,6 @@ export default function Home() {
             }
             return prev;
         });
-    };
-
-
-    const handleTypeChange = (newValue: string) => {
-        setSelectedType(newValue as ElementType);
     };
 
     return (
@@ -231,31 +220,31 @@ export default function Home() {
                                 }}
                                 items={[
                                     {
-                                        value: "Content",
+                                        value: ElementType.Content,
                                         label: t(`shared.${ElementType.Content}.typeLabel`),
                                     },
                                     {
-                                        value: "Flashcard",
+                                        value: ElementType.Flashcard,
                                         label: t(`shared.${ElementType.Flashcard}.typeLabel`),
                                     },
                                     {
-                                        value: "SC",
+                                        value: ElementType.Sc,
                                         label: t(`shared.${ElementType.Sc}.typeLabel`),
                                     },
                                     {
-                                        value: "MC",
+                                        value: ElementType.Mc,
                                         label: t(`shared.${ElementType.Mc}.typeLabel`),
                                     },
                                     {
-                                        value: "Kprim",
+                                        value: ElementType.Kprim,
                                         label: t(`shared.${ElementType.Kprim}.typeLabel`),
                                     },
                                     {
-                                        value: "Numerical",
+                                        value: ElementType.Numerical,
                                         label: t(`shared.${ElementType.Numerical}.typeLabel`),
                                     },
                                     {
-                                        value: "FreeText",
+                                        value: ElementType.FreeText,
                                         label: t(`shared.${ElementType.FreeText}.typeLabel`),
                                     },
                                     {
@@ -264,8 +253,9 @@ export default function Home() {
                                     },
 
                                 ]}
-                                value={selectedType}
-                                onChange={handleTypeChange}
+                                onChange={(newValue) => {
+                                    setSelectedType(newValue);
+                                }}
                             />
 
                         </div>
