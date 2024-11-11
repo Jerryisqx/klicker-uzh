@@ -43,6 +43,7 @@ import {
 import {
   ArchivedElement,
   Element,
+  ElementGenerated,
   OptionsChoicesInput,
   OptionsFreeTextInput,
   OptionsNumericalInput,
@@ -576,6 +577,16 @@ export const Mutation = builder.mutationType({
         },
       }),
 
+      updateElementGeneratedScore: t.withAuth(asUserFullAccess).field({
+        nullable: true,
+        type: ElementGenerated,
+        args: {
+          id: t.arg.int({ required: true }),
+          score: t.arg.int({ required: true }),
+        },
+        resolve: (_, args, ctx) => QuestionService.updateElementGeneratedScore(args, ctx),
+      }),
+      
       deleteParticipantAccount: t.withAuth(asParticipant).boolean({
         nullable: true,
         resolve(_, __, ctx) {

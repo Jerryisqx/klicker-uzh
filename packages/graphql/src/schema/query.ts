@@ -512,6 +512,17 @@ export const Query = builder.queryType({
         },
       }),
 
+      generatedQuestion: asUser.field({
+        nullable: true,
+        type: Element,
+        args: {
+          id: t.arg.int({ required: true }),
+        },
+        resolve(_, args, ctx) {
+          return QuestionService.getSingleGeneratedQuestion(args, ctx)
+        },
+      }),
+
       sessionLeaderboard: t.field({
         nullable: true,
         type: [LeaderboardEntry],

@@ -3,8 +3,8 @@ import Loader from '@klicker-uzh/shared-components/src/Loader'
 import { GetStaticPropsContext } from 'next'
 import { useTranslations } from 'next-intl'
 import { useState, useEffect,useMemo } from 'react';
-import { isEmpty, pickBy } from 'remeda';
-
+import { pickBy } from 'remeda';
+import { PageSourceProvider } from 'src/pageContext/PageContext';
 import { Button, Select, Label } from '@uzh-bf/design-system';
 import Layout from '../../components/Layout'
 import QuestionList from '../../components/questions/QuestionList'
@@ -12,6 +12,7 @@ import type { Element } from '@klicker-uzh/graphql/dist/ops'
 import {
     GetLatestNQuestionsDocument,
     ElementType,
+    UpdateElementGeneratedScoreDocument,
 
 } from '@klicker-uzh/graphql/dist/ops';
 
@@ -23,7 +24,6 @@ export default function Home() {
             Record<number, Element | undefined>
     >({})
 
-
     const selectedQuestionData = useMemo(
         () =>
           pickBy(
@@ -33,8 +33,10 @@ export default function Home() {
         [selectedQuestions]
     )
   
-    const [selectedType, setSelectedType] = useState(ElementType.Mc);
-    const [numQuestions, setNumQuestions] = useState(2);
+
+    const [selectedType, setSelectedType] = useState();
+    const [numQuestions, setNumQuestions] = useState<string>('2');
+    const [difficultyLevel, setDifficultyLevel] = useState<string>();
     const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
     const [questionsGenerated, setQuestionsGenerated] = useState(false);
     const [questions, setQuestions] = useState<any[]>([]);
@@ -52,43 +54,51 @@ export default function Home() {
 
     // Handle the click event for "Generate Question" button
     const handleGenerateQuestions = async () => {
-        // try {
-        //     const { data } = await refetchQuestions({ limit: numQuestions });
-        //     if (data && data.latestNQuestions) {
-        //         setQuestions(data.latestNQuestions);
-        //         setQuestionsGenerated(true);
-        //         console.log("Questions successfully fetched");
-        //     }
-        // } catch (error) {
-        //     console.error('Error fetching questions:', error);
-        // }
-        console.log('numQuestions:', numQuestions, 'selectedLanguage:', selectedLanguage);
         try {
-            const response = await fetch('http://127.0.0.1:8000/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ limit: numQuestions, language: selectedLanguage}),  // 发送生成问题的数量
-            });
-            
-            if (response.ok) {
-                const responseData = await response.json();
-                console.log("Questions successfully generated and stored:", responseData);
-                const { data } = await refetchQuestions({ limit: numQuestions });
-                if (data && data.latestNQuestions) {
-                    setQuestions(data.latestNQuestions);
-                    setQuestionsGenerated(true);
-                    console.log("Questions successfully fetched");
-                }
-            } else {
-                console.error("Response not OK:", response.status, await response.text());
+            const temp = Number(numQuestions);
+
+            const { data } = await refetchQuestions({ limit: temp });
+            if (data && data.latestNQuestions) {
+                setQuestions(data.latestNQuestions);
+                setQuestionsGenerated(true);
+                console.log("Questions successfully fetched");
             }
-            
         } catch (error) {
             console.error('Error fetching questions:', error);
         }
+        // try {
+        //     const response = await fetch('http://localhost:8000/generate', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //         },
+        //         body: JSON.stringify({ limit: numQuestions, language: selectedLanguage }),  // 发送生成问题的数量
+        //     });
+            
+        //     if (response.ok) {
+        //         console.log("Questions successfully generated and stored");
+        //         const { data } = await refetchQuestions({ limit: numQuestions});
+        //         if (data && data.latestNQuestions) {
+        //             setQuestions(data.latestNQuestions);
+        //             setQuestionsGenerated(true);
+        //             console.log("Questions successfully fetched");
+        //         }
+        //     }   
+            
+        // } catch (error) {
+        //     console.error('Error fetching questions:', error);
+        // }
     };
+
+    const handleNumQuestionChange = (newValue: string) =>{
+        if (newValue === 'RANDOM') {
+            const randomValue = Math.floor(Math.random() * 5) + 1; //random 1-5 numbers if choose random
+            setNumQuestions(randomValue.toString());
+          } else {
+            setNumQuestions(newValue);
+          }
+        
+    }
 
     const unsetDeletedQuestion = (questionId: number) => {
         setSelectedQuestions((prev) => {
@@ -106,7 +116,9 @@ export default function Home() {
         setSelectedType(newValue as ElementType);
     };
 
-    return ( 
+
+    return (
+        <PageSourceProvider isGeneratedPage={true}> 
         <Layout
             displayName={t('manage.general.ai')}
             className={{ children: 'pb-2' }}>
@@ -169,12 +181,10 @@ export default function Home() {
                                     },
                                     {
                                         label: t('manage.aiRelate.random'),
-                                        value: '3',
+                                        value: 'RANDOM',
                                     },
                                 ]}
-                                onChange={(newValue: string) =>
-                                    setNumQuestions(Number(newValue))
-                                }
+                                onChange={handleNumQuestionChange}
                             />
                         </div>
 
@@ -189,11 +199,11 @@ export default function Home() {
                             <Select
                                 items={[
                                     {
-                                        label: 'English',
+                                        label: t('manage.aiRelate.english'),
                                         value: 'English',
                                     },
                                     {
-                                        label: 'German',
+                                        label: t('manage.aiRelate.german'),
                                         value: 'German',
                                     },
                                 ]}
@@ -217,7 +227,7 @@ export default function Home() {
                                 className={{
                                     root: "block mb-2 text-sm font-semibold text-gray-700",
                                 }}
-                                placeholder={t('manage.questionForms.selectQuestionType')}
+
                                 items={[
                                     {
                                         value: "Content",
@@ -244,12 +254,12 @@ export default function Home() {
                                         label: t(`shared.${ElementType.Numerical}.typeLabel`),
                                     },
                                     {
-                                        value: ElementType.FreeText,
+                                        value: "FreeText",
                                         label: t(`shared.${ElementType.FreeText}.typeLabel`),
                                     },
                                     {
                                         label: t('manage.aiRelate.random'),
-                                        value: "LUCK",
+                                        value: "RANDOM",
                                     },
 
                                 ]}
@@ -257,6 +267,40 @@ export default function Home() {
                                 onChange={handleTypeChange}
                             />
 
+                        </div>
+
+                        <div>
+                            <Label
+                                label={t('manage.aiRelate.chooseDifficulty')}
+                                className={{
+                                    root: 'block mb-2 text-sm font-semibold text-gray-700',
+                                }}
+                            />
+
+                            <Select
+                                items={[
+                                    {
+                                        label: t('manage.aiRelate.easy'),
+                                        value: 'Easy',
+                                    },
+                                    {
+                                        label: t('manage.aiRelate.medium'),
+                                        value: 'Medium',
+                                    },
+                                    {
+                                        label: t('manage.aiRelate.hard'),
+                                        value: 'Hard',
+                                    },
+                                    {
+                                        label: t('manage.aiRelate.random'),
+                                        value: "RANDOM",
+                                    },
+                                ]}
+                                onChange={(newValue) => {
+                                    setDifficultyLevel(newValue);
+                                }}
+
+                            />
                         </div>
 
                         <Button
@@ -309,9 +353,9 @@ export default function Home() {
                     )}
                     </div>
                 </div>
-                      
 
         </Layout>
+        </PageSourceProvider>
 
     );
 }

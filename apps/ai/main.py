@@ -34,6 +34,7 @@ class GenerateQuestionsRequest(BaseModel):
     limit: int
     language: str
 
+
 def db_connect():
     try:
         connection = psycopg2.connect(
@@ -184,3 +185,4 @@ async def generate_questions(request: GenerateQuestionsRequest):
 
     return {"latestNQuestions": questions}
     # return jsonify({"questions": questions})
+

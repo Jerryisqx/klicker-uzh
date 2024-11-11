@@ -117,6 +117,71 @@ export async function getLatestNQuestions(
 
 }
 
+//manipulate the score of each generated questions
+export async function updateElementGeneratedScore(
+  { id, score }: { id: number; score: number },
+  ctx: ContextWithUser
+) {
+  return await ctx.prisma.elementGenerated.update({
+    where: {
+      id: id,
+      ownerId: ctx.user.sub,
+    },
+    data: {
+      score: score,
+    },
+  });
+}
+
+
+export async function getSingleGeneratedQuestion(
+  { id }: { id: number },
+  ctx: ContextWithUser
+) {
+  const question = await ctx.prisma.elementGenerated.findUnique({
+    where: {
+      id,
+      ownerId: ctx.user.sub,
+    },
+    include: {
+      tags: {
+        orderBy: {
+          order: 'asc',
+        },
+      },
+    },
+  })
+
+  if (!question) return null
+
+  let questionDataType: string
+  if (
+    question.type === DB.ElementType.SC ||
+    question.type === DB.ElementType.MC ||
+    question.type === DB.ElementType.KPRIM
+  ) {
+    questionDataType = 'ChoicesElementData'
+  } else if (question.type === DB.ElementType.NUMERICAL) {
+    questionDataType = 'NumericalElementData'
+  } else if (question.type === DB.ElementType.FREE_TEXT) {
+    questionDataType = 'FreeTextElementData'
+  } else if (question.type === DB.ElementType.FLASHCARD) {
+    questionDataType = 'FlashcardElementData'
+  } else {
+    questionDataType = 'ContentElementData'
+  }
+
+  return {
+    ...question,
+    questionData: {
+      ...question,
+      __typename: questionDataType,
+      id: `${question.id}-v${question.version}`,
+      questionId: question.id,
+    },
+  }
+}
+
 export async function getSingleQuestion(
   { id }: { id: number },
   ctx: ContextWithUser

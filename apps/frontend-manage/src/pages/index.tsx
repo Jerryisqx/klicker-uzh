@@ -41,6 +41,7 @@ import SuspendedFirstLoginModal from '../components/user/SuspendedFirstLoginModa
 import useSortingAndFiltering, {
   SortyByType,
 } from '../lib/hooks/useSortingAndFiltering'
+import { PageSourceProvider } from 'src/pageContext/PageContext'
 
 function Index() {
   const router = useRouter()
@@ -139,6 +140,7 @@ function Index() {
   }, [sortBy, sort.asc])
 
   return (
+    <PageSourceProvider isGeneratedPage={false}>
     <Layout
       displayName={t('manage.general.questionPool')}
       data={{ cy: 'homepage' }}
@@ -436,6 +438,8 @@ function Index() {
         <SuspendedFirstLoginModal />
       </Suspense>
     </Layout>
+    </PageSourceProvider>
+
   )
 }
 

@@ -4,6 +4,7 @@
 import logging
 import os
 # API and KEY set
+
 os.environ["OPENAI_API_KEY"] = ""
 os.environ["LANGFUSE_PUBLIC_KEY"] = ""
 os.environ["LANGFUSE_SECRET_KEY"] = ""
