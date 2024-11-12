@@ -3,6 +3,7 @@
 
 import logging
 import os
+import io
 # API and KEY set
 
 os.environ["OPENAI_API_KEY"] = ""
@@ -13,6 +14,9 @@ os.environ["LANGFUSE_HOST"] = ""
 # Enable Haystack content tracing
 os.environ["HAYSTACK_CONTENT_TRACING _ENABLED"] = "True"
 
+logging.basicConfig(level=logging.INFO)
+
+import PyPDF2
 from pathlib import Path
 from getpass import getpass
 from haystack import Pipeline, Document
@@ -57,8 +61,10 @@ class PreProcess:
         self.preprocess_pipeline.connect("document_embedder", "document_writer")
     
     def run_preprocess(self, doc_path):
-        doc_path = Path(doc_path)
-        self.preprocess_pipeline.run({"file_type_router": {"sources": [doc_path]}},
+        pdf_file = PyPDF2.PdfReader(io.BytesIO(doc_path))
+        print(pdf_file)
+        # document = self.pdf_converter.run(pdf_file)
+        self.preprocess_pipeline.run({"file_type_router": {"sources": [pdf_file]}},
                             include_outputs_from=["document_splitter"])
         self.retriever = InMemoryEmbeddingRetriever(self.document_store)
         return self.retriever
@@ -77,7 +83,7 @@ class Agent():
             notes and a question type specified by the user. Your task is to create specific, relevant questions using the provided context. Question types may include 
             single choice (only one right option), multiple choices (must have two or more right options), flashcard, content,numerical and Kprim. Please follow these instructions:
                 1.Understand the input: You should understand the input of the context and the number of the questions and language of the questions.
-                2.Generate questions: Based on the input, generate relevant questions that fit the specified question type and topic.
+                2.Generate questions: Based on the input, generate relevant questions that fit the specified question type and topic.When generating questions, please create questions of various difficulty levels. Also, include the relevant sub-field of each question in the question field.
                 3.All kinds of questions should be based on the question format, which means that they have front and back.
                 4.Output format: Your response should include examples of questions including the answers. Please DO NOT number each generated question.
                 5.The questions number is specified in the query, please generate the same number of questions in the query.
@@ -86,7 +92,7 @@ class Agent():
                 8.You shouldn't generate single choice question with the format of multiple choices and vice versa.
                 9.Everytime your generation should be in the same format. Don't add any additional symbol or change.
                 10.After generating the questions and answers,please give them a difficulty level based on the number of steps of CoTs.If the number of CoTs
-                below 4, the difficulty level is easy; If the number of CoTs is between 4 to 8,the difficulty level is medium; otherwise, the difficulty level is hard.
+                below 6, the difficulty level is easy; If the number of CoTs is between 6 to 10,the difficulty level is medium; otherwise, the difficulty level is hard.
                 10.The Kprim questions should follow the characteristics: The question consists of a stem (the main question or scenario) followed by four statements. For each of the four statements, the respondent must decide whether it is true or false.
                 11.The Numerical questions has a statement with an underline in the sentence to be filled with a number. With the correct number, it becomes a complete statement.
                 12.The Content questions is open-end questions. Users should write answer in long/short text or number format. You don't need to provide answers.
@@ -101,7 +107,8 @@ class Agent():
                 
             The Question Flashcard format should be:
                 Question Type
-                Difficulty Level
+                Difficulty Level:[Insert your difficulty level here]
+                Question Field:[Insert your question filed here]
                 Question: [Insert your question here]
                 Back: [generate options and answers in given JSON structure]
 
@@ -110,7 +117,8 @@ class Agent():
 
                 Single Choice (Should ONLY have ONE right choice)
                     Single Choice
-                    Difficulty Level
+                    [Insert your difficulty level here]
+                    [Insert your question filed here]
                     Question: [Insert your question here]
                     Back:
                         {
@@ -160,7 +168,8 @@ class Agent():
              
                 Multiple Choices (Should have TWO or More right choices)
                     Multiple Choices
-                    [Insert the Difficulty Level]
+                    [Insert your difficulty level here]
+                    [Insert your question filed here]
                     Question: [Insert your question here] 
                     Back:
                         {
@@ -209,7 +218,8 @@ class Agent():
                 
                 Numerical
                     Numerical
-                    [Insert the Difficulty Level]
+                    [Insert your difficulty level here]
+                    [Insert your question filed here]
                     Question: [Insert your question statement with an underline __ where the number should be filled in] (Example: We have 5 apples. If we give out __, we have 2 apples left.)
                     Back:
                         {
@@ -239,7 +249,8 @@ class Agent():
             
                 Kprim
                     Kprim
-                    [Insert the Difficulty Level]
+                    [Insert your difficulty level here]
+                    [Insert your question filed here]
                     Question: [Insert your stem here]   
                     Back:
                         {
@@ -280,7 +291,8 @@ class Agent():
 
                 Content
                     Content
-                    [Insert the Difficulty Level]
+                    [Insert your difficulty level here]
+                    [Insert your question filed here]
                     Question: [Insert your question here]
                     Back:
                         {
@@ -289,7 +301,8 @@ class Agent():
                     
                 Flashcard
                     Flashcard
-                    [Insert the Difficulty Level]
+                    [Insert your difficulty level here]
+                    [Insert your question filed here]
                     Question: [Insert your question here]
                     Back:
                         {
@@ -323,14 +336,15 @@ class Agent():
         self.rag_pipeline.connect("llm.meta", "answer_builder.meta")
         self.rag_pipeline.connect("retriever", "answer_builder.documents")
     
-    def run_agent(self, question_number, language):
-        question = f"Generate {question_number} questions from the document in {language}."
+    def run_agent(self, question_number, language, difficulty_level, question_type):
+        question =f"Please generate {question_number} {question_type} questions, the difficulty of the questions is {difficulty_level}, and the question language is {language}."
         response = self.rag_pipeline.run({
             "text_embedder": {"text": question}, 
             "prompt_builder": {"question": question}, 
             "answer_builder": {"query": question}})
         
         return response
+    
     
 
 # def run_agent(pipeline,question):
@@ -343,7 +357,7 @@ class Agent():
 #     return response
 
 # if __name__ == "__main__":
-#     input_doc = "data/test-doc.pdf"
+#     input_doc = "/Users/jerrychen/Projects/klicker-uzh/apps/ai/data/test-doc.pdf"
 #     preprocess = PreProcess()
 #     preprocess.init()
 #     retriever = preprocess.run_preprocess(input_doc)

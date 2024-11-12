@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, Depends
+import aioredis
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
@@ -7,6 +8,8 @@ import logging
 import psycopg2
 import psycopg2.extras
 import re
+import os
+import io
 import json
 import uuid
 from datetime import datetime
@@ -15,7 +18,7 @@ from agent_haystack import PreProcess, Agent
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
-# CORS 配置：允许来自前端的跨域请求
+# CORS settings
 # origins = [
 #     "http://localhost:8000",
 #     "http://127.0.0.1:8000"
@@ -23,16 +26,41 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 允许的来源
+    allow_origins=["*"],  # Permitted sources
     allow_credentials=True,
-    allow_methods=["*"],  # 允许所有方法
-    allow_headers=["*"],  # 允许所有头部
+    allow_methods=["*"],  # Permit all methods
+    allow_headers=["*"],  # Permit all headers
 )
 
-# 请求体模型
+# Setting the base directory for uploading files
+UPLOAD_FOLDER = 'tmp'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+@app.on_event('startup')
+async def startup_event():
+    """
+    获取链接
+    :return:
+    """
+    app.state.redis = await aioredis.from_url('redis://localhost:6379')
+
+@app.on_event('shutdown')
+async def shutdown_event():
+    """
+    关闭
+    :return:
+    """
+    app.state.redis.close()
+    await app.state.redis.wait_closed()
+
+
+# Request model for generating questions
 class GenerateQuestionsRequest(BaseModel):
     limit: int
     language: str
+    type: str
+    difficulty: str
 
 
 def db_connect():
@@ -78,7 +106,8 @@ def parse_question(context):
         part = re.split(r'\n\s*', part)
         current_question['type'] = part[0]
         current_question['difficulty'] = part[1]
-        current_question['question'] = part[2][10:]
+        current_question['name'] = part[2]
+        current_question['question'] = part[3][10:]
         # Find JSON block (between first { and last } before blank part)
         json_text = ''
         
@@ -90,6 +119,7 @@ def parse_question(context):
             except Exception as e:
                 continue
         current_question['options'] = json_text
+        # print(type(current_question['options']))
         questions.append(current_question)
 
     return questions
@@ -108,16 +138,19 @@ def insert_questions_to_db(connection, questions):
     try:
         with connection.cursor() as cursor:
             for question in questions:
-                query = """ INSERT INTO "ElementGenerated" ("content", "options", "type", "name", "ownerId", "createdAt", "updatedAt") VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+                query = """ INSERT INTO "ElementGenerated" ("content", "options", "type", "name", "ownerId", "createdAt", "updatedAt", "difficulty") VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
                 content = question['question']
-                options = json.dumps(json.loads(question['options']))
+                options_raw=question['options']
+                json_content = options_raw.split("Back:")[1].strip()
+                options = json.dumps(json.loads(json_content))
                 type = map_question_type(question['type'])
-                name = "This is a question"
+                name = question['name']
+                difficulty= question['difficulty']
                 psycopg2.extras.register_uuid()
                 ownerid = uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")
                 current_time = datetime.now().replace(microsecond=datetime.now().microsecond - (datetime.now().microsecond % 1000))
                 isAI = True
-                cursor.execute(query, (content, options, type, name, ownerid, current_time, current_time))
+                cursor.execute(query, (content, options, type, name, ownerid, current_time, current_time, difficulty))
         connection.commit()
         logging.info(f"Successfully inserted {len(questions)} questions into the database.")
     except Exception as e:
@@ -127,11 +160,15 @@ def insert_questions_to_db(connection, questions):
 
 @app.post('/generate')
 async def generate_questions(request: GenerateQuestionsRequest):
+    global filename
     # data = request.json
     # questions_number = data.get('questions_number', 5)
     # language = data.get('language', 'English')
     questions_number = request.limit
     language = request.language
+    type = request.type
+    difficulty = request.difficulty
+    # filename = file.filename
 
     db = None  # Initialize db_conn
 
@@ -144,7 +181,15 @@ async def generate_questions(request: GenerateQuestionsRequest):
     except Exception as e:
         logging.error(f"Failed to connect to the database: {e}")
 
-    pdf_file_path = 'data/test-doc.pdf'
+    try:
+        cached_file = await app.state.redis.get(f"file_{filename}")
+        logging.info(f"File {filename} found in cache")
+    except Exception as e:
+        logging.error(f"Error reading file from cache: {e}")
+    
+    pdf_file_path = cached_file
+    # pdf_file_path = os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
+    # pdf_file_path = '/apps/ai/tmp/test-doc.pdf'
     # logging.info(f"Latest PDF ID: {pdf_id}, Path: {pdf_file_path}")
     # Initialize the generator and retriever
     logging.info("Initializing OpenAI generator and retriever...")
@@ -160,7 +205,7 @@ async def generate_questions(request: GenerateQuestionsRequest):
     # Call the agent with the pipeline and query
     try:
         logging.info(f"Generating response")
-        response = agent.run_agent(questions_number, language)
+        response = agent.run_agent(questions_number, language, difficulty, type)
     except Exception as e:
         logging.error(f"Error during generation: {e}")
 
@@ -177,12 +222,28 @@ async def generate_questions(request: GenerateQuestionsRequest):
         logging.info(f"Generated text:\n{generated_text}")
 
     questions = parse_question(generated_text)
-    
     insert_questions_to_db(db, questions)
-
-    if not db.closed:  # 检查连接是否已关闭
+    
+    if not db.closed:
         db.close()
 
     return {"latestNQuestions": questions}
     # return jsonify({"questions": questions})
 
+# Receive PDF file and save it into /tmp folder
+@app.post('/upload')
+async def upload_pdf(file: UploadFile = File(...)):
+    global filename
+    try:
+        contents = await file.read()
+        logging.info(f"Received file: {file.filename}")
+    except Exception as e:  
+        logging.error(f"Error reading file: {e}")
+        raise HTTPException(status_code=500, detail="Error reading file")
+    # Save the file to the uploads folder
+    with open(f'{UPLOAD_FOLDER}/{file.filename}', 'wb') as f:
+        f.write(contents)
+    await app.state.redis.set(f"file_{file.filename}", contents)
+    logging.info(f"File saved to cache: {file.filename}")
+    filename = file.filename
+    return {"message": "Upload successful"}

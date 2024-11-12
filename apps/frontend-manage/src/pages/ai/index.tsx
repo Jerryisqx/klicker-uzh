@@ -40,6 +40,7 @@ export default function Home() {
     const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
     const [questionsGenerated, setQuestionsGenerated] = useState(false);
     const [questions, setQuestions] = useState<any[]>([]);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     const { loading: loadingQuestions, error: errorQuestions, data: dataQuestions, refetch: refetchQuestions } = useQuery(GetLatestNQuestionsDocument,
         {skip: true,}
@@ -54,40 +55,68 @@ export default function Home() {
 
     // Handle the click event for "Generate Question" button
     const handleGenerateQuestions = async () => {
-        try {
-            const temp = Number(numQuestions);
-
-            const { data } = await refetchQuestions({ limit: temp });
-            if (data && data.latestNQuestions) {
-                setQuestions(data.latestNQuestions);
-                setQuestionsGenerated(true);
-                console.log("Questions successfully fetched");
-            }
-        } catch (error) {
-            console.error('Error fetching questions:', error);
-        }
         // try {
-        //     const response = await fetch('http://localhost:8000/generate', {
-        //         method: 'POST',
-        //         headers: {
-        //             'Content-Type': 'application/json',
-        //         },
-        //         body: JSON.stringify({ limit: numQuestions, language: selectedLanguage }),  // 发送生成问题的数量
-        //     });
-            
-        //     if (response.ok) {
-        //         console.log("Questions successfully generated and stored");
-        //         const { data } = await refetchQuestions({ limit: numQuestions});
-        //         if (data && data.latestNQuestions) {
-        //             setQuestions(data.latestNQuestions);
-        //             setQuestionsGenerated(true);
-        //             console.log("Questions successfully fetched");
-        //         }
-        //     }   
-            
+        //     const temp = Number(numQuestions);
+
+        //     const { data } = await refetchQuestions({ limit: temp });
+        //     if (data && data.latestNQuestions) {
+        //         setQuestions(data.latestNQuestions);
+        //         setQuestionsGenerated(true);
+        //         console.log("Questions successfully fetched");
+        //     }
         // } catch (error) {
         //     console.error('Error fetching questions:', error);
         // }
+        try {
+            const response = await fetch('http://localhost:8000/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ limit: numQuestions, language: selectedLanguage, type: selectedType, difficulty: difficultyLevel }),  // 发送生成问题的数量
+            });
+            
+            if (response.ok) {
+                console.log("Questions successfully generated and stored");
+                const { data } = await refetchQuestions({ limit: Number(numQuestions)});
+                if (data && data.latestNQuestions) {
+                    setQuestions(data.latestNQuestions);
+                    setQuestionsGenerated(true);
+                    console.log("Questions successfully fetched");
+                }
+            }   
+            
+        } catch (error) {
+            console.error('Error fetching questions:', error);
+        }
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files.length > 0) {
+            setSelectedFile(event.target.files[0]);
+        }
+    };
+
+    const handleFileUpload = async () => {
+        if (!selectedFile) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        try {
+            const response = await fetch('http://localhost:8000/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (response.ok) {
+                console.log('File successfully uploaded');
+            }
+        } catch (error) {
+            console.error('Error uploading file:', error);
+        }
     };
 
     const handleNumQuestionChange = (newValue: string) =>{
@@ -98,7 +127,7 @@ export default function Home() {
             setNumQuestions(newValue);
           }
         
-    }
+    };
 
     const unsetDeletedQuestion = (questionId: number) => {
         setSelectedQuestions((prev) => {
@@ -148,7 +177,16 @@ export default function Home() {
                             file:text-sm file:font-semibold
                             file:bg-violet-50 file:text-violet-700
                             hover:file:bg-violet-100"
+                            onChange={handleFileChange}
                         />
+                        <Button
+                            onClick={handleFileUpload}
+                            className={{
+                                root: "w-full py-3 bg-blue-800 text-white font-semibold rounded-lg hover:bg-blue-900 transition",
+                            }}
+                        >
+                            Upload File
+                        </Button>
                     </div>
 
                     <div className="space-y-4 mb-6">
