@@ -133,6 +133,27 @@ export async function updateElementGeneratedScore(
   });
 }
 
+//get difficulty level
+export async function getQuestionDifficulty(
+  { id }: { id: number },
+  ctx: ContextWithUser
+): Promise<DB.DifficultyLevel>{ 
+  const question = await ctx.prisma.elementGenerated.findUnique({
+    where: {
+      id: id,
+    },
+    select: {
+      difficulty: true, 
+    },
+  });
+
+  if (!question) {
+    return DB.DifficultyLevel.EASY; 
+  }
+
+  return question.difficulty;
+
+}
 
 export async function getSingleGeneratedQuestion(
   { id }: { id: number },

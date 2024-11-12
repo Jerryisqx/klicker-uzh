@@ -6,6 +6,13 @@ enum ElementStatus {
   READY
 }
 
+//Add for generatedQuestion
+enum DifficultyLevel {
+  EASY
+  MEDIUM
+  HARD
+}
+
 enum ElementType {
   // TODO: remove old types, to be migrated to new ones
   SC
@@ -85,6 +92,7 @@ model ElementGenerated {
   options Json
 
   status ElementStatus @default(READY)
+  difficulty DifficultyLevel @default(EASY)
   type   ElementType
 
   tags Tag[] @relation("ElementGeneratedTags")

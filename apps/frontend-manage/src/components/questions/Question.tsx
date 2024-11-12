@@ -6,13 +6,13 @@ import {
 import { IconDefinition, faArchive } from '@fortawesome/free-solid-svg-icons'
 import { Button, Checkbox, H2, H3, Modal } from '@uzh-bf/design-system'
 import { Badge } from '@uzh-bf/design-system/dist/future'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useDrag } from 'react-dnd'
 import { twMerge } from 'tailwind-merge'
 // TODO: readd modals and tags
 // import QuestionDetailsModal from './QuestionDetailsModal'
 // import QuestionDuplicationModal from './QuestionDuplicationModal'
-import { useMutation } from '@apollo/client'
+import { useMutation, useQuery } from '@apollo/client'
 import { faCopy } from '@fortawesome/free-regular-svg-icons'
 import { faPencil, faTrash, faThumbsUp, faThumbsDown } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -23,6 +23,8 @@ import {
   GetUserQuestionsDocument,
   UpdateElementGeneratedScoreDocument,
   Tag,
+  DifficultyLevel,
+  GetQuestionDifficultyDocument,
 } from '@klicker-uzh/graphql/dist/ops'
 import { Ellipsis } from '@klicker-uzh/markdown'
 import dayjs from 'dayjs'
@@ -41,6 +43,13 @@ const StatusColors: Record<ElementStatus, string> = {
   [ElementStatus.Review]: 'bg-violet-400',
   [ElementStatus.Ready]: 'bg-green-400',
 }
+
+
+const DifficultyColors: Record<DifficultyLevel, string> = {
+  [DifficultyLevel.Easy]: 'bg-green-400',
+  [DifficultyLevel.Medium]: 'bg-yellow-400',
+  [DifficultyLevel.Hard]: 'bg-red-400',
+};
 
 const ElementIcons: Record<ElementType, IconDefinition> = {
   FLASHCARD: faListRegular,
@@ -107,6 +116,15 @@ function Question({
     DeleteQuestionDocument
   )
   const [updateScore] = useMutation(UpdateElementGeneratedScoreDocument)
+
+  const { data: difficultyData, loading: loadingDifficulty, error: errorDifficulty,} = useQuery(GetQuestionDifficultyDocument, {
+    variables: { id },
+  });
+
+  const difficulty = difficultyData?.questionDifficulty;
+  
+
+  
 
 
   //Determine which subpage we are in
@@ -205,11 +223,22 @@ function Question({
               </div>
 
               <div className="flex flex-none flex-col gap-1 text-sm text-slate-600 md:flex-row md:gap-4">
-                <div className="w-20">
-                  <Badge className={twMerge(StatusColors[status])}>
-                    {t(`shared.${status}.statusLabel`)}
-                  </Badge>
-                </div>
+                {!isGeneratedPage && (
+                  <div className="w-20">
+                    <Badge className={twMerge(StatusColors[status])}>
+                      {t(`shared.${status}.statusLabel`)}
+                    </Badge>
+                  </div>
+                )}
+
+                {isGeneratedPage && (
+                  <div className="w-20">
+                    <Badge className={twMerge(DifficultyColors[difficulty])}>
+                      {t(`shared.${difficulty}.difficultyLabel`)}
+                    </Badge>
+                  </div>
+                )}
+
                 <div className="w-36">{t(`shared.${type}.typeLabel`)}</div>
                 <div>
                   {t('shared.generic.createdAt', {

@@ -12,6 +12,7 @@ import type { Element } from '@klicker-uzh/graphql/dist/ops'
 import {
     GetLatestNQuestionsDocument,
     ElementType,
+    DifficultyLevel,
   } from '@klicker-uzh/graphql/dist/ops';
 
 export default function Home() {
@@ -271,16 +272,16 @@ export default function Home() {
                             <Select
                                 items={[
                                     {
-                                        label: t('manage.aiRelate.easy'),
-                                        value: 'Easy',
+                                        label: t(`shared.${DifficultyLevel.Easy}.difficultyLabel`),
+                                        value: DifficultyLevel.Easy,
                                     },
                                     {
-                                        label: t('manage.aiRelate.medium'),
-                                        value: 'Medium',
+                                        label: t(`shared.${DifficultyLevel.Medium}.difficultyLabel`),
+                                        value: DifficultyLevel.Medium,
                                     },
                                     {
-                                        label: t('manage.aiRelate.hard'),
-                                        value: 'Hard',
+                                        label: t(`shared.${DifficultyLevel.Hard}.difficultyLabel`),
+                                        value: DifficultyLevel.Hard,
                                     },
                                     {
                                         label: t('manage.aiRelate.random'),

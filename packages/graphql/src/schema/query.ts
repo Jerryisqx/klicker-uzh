@@ -38,6 +38,7 @@ import {
   StackFeedback,
 } from './practiceQuizzes.js'
 import { Element, Tag } from './question.js'
+import { DifficultyLevel } from './questionData.js'
 import {
   Feedback,
   RunningLiveQuizSummary,
@@ -210,6 +211,18 @@ export const Query = builder.queryType({
             }, ctx);
         },
       }),
+
+      //add new for get question difficulty
+      questionDifficulty: asUser.field({
+        type: DifficultyLevel, 
+        args: {
+          id: t.arg.int({ required: true }), 
+        },
+        resolve(_, { id }, ctx) {
+          return QuestionService.getQuestionDifficulty({ id }, ctx);
+        },
+      }),
+      
 
       userCourses: asUser.field({
         nullable: true,
