@@ -1,188 +1,162 @@
-# from fastapi import FastAPI, HTTPException, Depends
-# from fastapi.middleware.cors import CORSMiddleware
-# from pydantic import BaseModel
-# from typing import List
-# import random
-# import logging
-# import psycopg2
-# import psycopg2.extras
-# import re
-# import json
-# import uuid
-# from datetime import datetime
-# from agent_haystack import PreProcess, Agent
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
+import random
+import logging
+import re
+import os
+import json
+import uuid
+from datetime import datetime
+from agent_haystack import PreProcess, Agent
+from prisma import Prisma
 
-# logging.basicConfig(level=logging.INFO)
-# app = FastAPI()
+logging.basicConfig(level=logging.INFO)
+app = FastAPI()
 
-# # CORS 配置：允许来自前端的跨域请求
-# # origins = [
-# #     "http://localhost:8000",
-# #     "http://127.0.0.1:8000"
-# # ]
+# Initialize Prisma client
+db = Prisma()
+os.environ['DATABASE_URL'] = 'postgresql://klicker:klicker@host.docker.internal:5432/klicker'
+db.connect()
+# CORS 配置：允许来自前端的跨域请求
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许的来源
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有方法
+    allow_headers=["*"],  # 允许所有头部
+)
 
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],  # 允许的来源
-#     allow_credentials=True,
-#     allow_methods=["*"],  # 允许所有方法
-#     allow_headers=["*"],  # 允许所有头部
-# )
+# 设置上传文件的基础目录
+UPLOAD_FOLDER = 'tmp'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
-# # 请求体模型
-# class GenerateQuestionsRequest(BaseModel):
-#     limit: int
-#     language: str
+# 请求体模型
+class GenerateQuestionsRequest(BaseModel):
+    limit: int
+    language: str
+    type: str
+    difficulty: str
 
+# Function to get the latest PDF file from the database that is not deleted
+async def get_latest_pdf():
+    try:
+        result = await db.pdf_files.find_first(
+            where={"is_deleted": False},
+            order={"uploaded_at": "desc"}
+        )
+        if result:
+            return {"pdf_id": result.id, "file_name": result.file_name, "file_path": result.file_path}
+        return None
+    except Exception as e:
+        logging.error(f"Error querying the PDF data: {e}")
+        raise
 
-# def db_connect():
-#     try:
-#         connection = psycopg2.connect(
-#             host="localhost",  # Database host
-#             port="5432",
-#             database="klicker",      # Database name
-#             user="klicker",          # Username
-#             password="klicker"       # Password
-#         )
-#         return connection
-#     except Exception as e:
-#         logging.error(f"Failed to connect to the database: {e}")
-#         raise
+def parse_question(context):
+    parts = re.split(r'\n\s*\n', context)
 
-# # Function to get the latest PDF file from the database that is not deleted
-# def get_latest_pdf(connection):
-#     try:
-#         query = """
-#             SELECT id, file_name, file_path 
-#             FROM pdf_files 
-#             WHERE is_deleted = false 
-#             ORDER BY uploaded_at DESC 
-#             LIMIT 1
-#         """
-#         with connection.cursor() as cursor:
-#             cursor.execute(query)
-#             result = cursor.fetchone()
-#             if result:
-#                 return {"pdf_id": result[0], "file_name": result[1], "file_path": result[2]}
-#             return None
-#     except Exception as e:
-#         logging.error(f"Error querying the PDF data: {e}")
-#         raise
+    questions = []
+    for part in parts:
+        current_question = {}
+        part = re.split(r'\n\s*', part)
+        current_question['type'] = part[0]
+        current_question['difficulty'] = part[1]
+        current_question['name'] = part[2]
+        current_question['question'] = part[3][10:]
+        json_text = ''
 
-# def parse_question(context):
-#     parts = re.split(r'\n\s*\n', context)
+        for block in part[4:]:
+            try:
+                json_text += block
+                json.loads(json_text)
+                break
+            except Exception:
+                continue
+        current_question['options'] = json_text
+        questions.append(current_question)
 
-#     questions = []
-#     for part in parts:
-#         current_question = {}
-#         part = re.split(r'\n\s*', part)
-#         current_question['type'] = part[0]
-#         current_question['difficulty'] = part[1]
-#         current_question['question'] = part[2][10:]
-#         # Find JSON block (between first { and last } before blank part)
-#         json_text = ''
-        
-#         for block in part[4:]:
-#             try:
-#                 json_text += block
-#                 json.loads(json_text)
-#                 break
-#             except Exception as e:
-#                 continue
-#         current_question['options'] = json_text
-#         questions.append(current_question)
+    return questions
 
-#     return questions
+def map_question_type(generated_type):
+    type_mapping = {
+        'Single Choice': 'SC',
+        'Multiple Choices': 'MC',
+        'Numerical': 'NUMERICAL',
+        'Free Text': 'FREE_TEXT',
+        'Kprim': 'KPRIM',
+        'Flashcard': 'FLASHCARD'
+    }
+    return type_mapping.get(generated_type, 'CONTENT')  # Default to CONTENT if type not found
 
-# def map_question_type(generated_type):
-#     type_mapping = {
-#         'Single Choice': 'SC',
-#         'Multiple Choices': 'MC',
-#         'Numerical': 'NUMERICAL',
-#         'Free Text': 'FREE_TEXT',
-#         'Kprim': 'KPRIM'
-#     }
-#     return type_mapping.get(generated_type, 'CONTENT')  # Default to CONTENT if type not found
+async def insert_questions_to_db(questions):
+    try:
+        for question in questions:
+            db.elementgenerated.create(
+                data={
+                    "content": question['question'],
+                    "options": json.dumps(json.loads(question['options'].split("Back:")[1].strip())),
+                    "type": map_question_type(question['type']),
+                    "name": question['name'],
+                    "ownerId": str(uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")),  # 转换为字符串
+                    "createdAt": datetime.now(),
+                    "updatedAt": datetime.now(),
+                    "difficulty": question['difficulty']
+                }
+            )
+        logging.info(f"Successfully inserted {len(questions)} questions into the database.")
+    except Exception as e:
+        logging.error(f"Error inserting questions into the database: {e}")
+        raise
 
-# def insert_questions_to_db(connection, questions):
-#     try:
-#         with connection.cursor() as cursor:
-#             for question in questions:
-#                 query = """ INSERT INTO "ElementGenerated" ("content", "options", "type", "name", "ownerId", "createdAt", "updatedAt") VALUES (%s, %s, %s, %s, %s, %s, %s)"""
-#                 content = question['question']
-#                 options = json.dumps(json.loads(question['options']))
-#                 type = map_question_type(question['type'])
-#                 name = "This is a question"
-#                 psycopg2.extras.register_uuid()
-#                 ownerid = uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")
-#                 current_time = datetime.now().replace(microsecond=datetime.now().microsecond - (datetime.now().microsecond % 1000))
-#                 isAI = True
-#                 cursor.execute(query, (content, options, type, name, ownerid, current_time, current_time))
-#         connection.commit()
-#         logging.info(f"Successfully inserted {len(questions)} questions into the database.")
-#     except Exception as e:
-#         connection.rollback()
-#         logging.error(f"Error inserting questions into the database: {e}")
-#         raise
+@app.post('/generate')
+async def generate_questions(request: GenerateQuestionsRequest):
+    global filename
 
-# @app.post('/generate')
-# async def generate_questions(request: GenerateQuestionsRequest):
-#     # data = request.json
-#     # questions_number = data.get('questions_number', 5)
-#     # language = data.get('language', 'English')
-#     questions_number = request.limit
-#     language = request.language
+    questions_number = request.limit
+    language = request.language
+    type = request.type
+    difficulty = request.difficulty
 
-#     db = None  # Initialize db_conn
+    logging.info("Starting the question generation process...")
 
-#     logging.info("Starting the question generation process...")
+    pdf_file_path = os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
 
-#     # Get database connection
-#     try:
-#         db = db_connect()
-#         logging.info("Database connection established.")
-#     except Exception as e:
-#         logging.error(f"Failed to connect to the database: {e}")
+    logging.info("Initializing OpenAI generator and retriever...")
+    try:
+        preprocess = PreProcess()
+        preprocess.init()
+        retriever = preprocess.run_preprocess(pdf_file_path)
+        agent = Agent(retriever=retriever)
+        agent.init()
+    except Exception as e:
+        logging.error(f"Error initializing OpenAI pipeline: {e}")
 
-#     pdf_file_path = 'data/test-doc.pdf'
-#     # logging.info(f"Latest PDF ID: {pdf_id}, Path: {pdf_file_path}")
-#     # Initialize the generator and retriever
-#     logging.info("Initializing OpenAI generator and retriever...")
-#     try:
-#         preprocess = PreProcess()
-#         preprocess.init()
-#         retriever = preprocess.run_preprocess(pdf_file_path)
-#         agent = Agent(retriever=retriever)
-#         agent.init()
-#     except Exception as e:
-#         logging.error(f"Error initializing OpenAI pipeline: {e}")
+    try:
+        logging.info(f"Generating response")
+        response = agent.run_agent(questions_number, language, difficulty, type)
+    except Exception as e:
+        logging.error(f"Error during generation: {e}")
 
-#     # Call the agent with the pipeline and query
-#     try:
-#         logging.info(f"Generating response")
-#         response = agent.run_agent(questions_number, language)
-#     except Exception as e:
-#         logging.error(f"Error during generation: {e}")
+    generated_text = response['answer_builder']['answers'][0].data
 
-#     # Extract the generated questions as plain text
-#     generated_text = response['answer_builder']['answers'][0].data
+    if not generated_text:
+        logging.error("Generated text is empty.")
+    else:
+        logging.info(f"Generated text:\n{generated_text}")
 
-#     # with open('generate.txt', 'w') as f:
-#     #     f.write(generated_text)
+    questions = parse_question(generated_text)
+    await insert_questions_to_db(questions)
 
-#     # Log and print the generated text
-#     if not generated_text:
-#         logging.error("Generated text is empty.")
-#     else:
-#         logging.info(f"Generated text:\n{generated_text}")
+    return {"latestNQuestions": questions}
 
-#     questions = parse_question(generated_text)
-    
-#     insert_questions_to_db(db, questions)
-
-#     if not db.closed:  # 检查连接是否已关闭
-#         db.close()
-
-#     return {"latestNQuestions": questions}
-#     # return jsonify({"questions": questions})
-
+# Receive PDF file and save it into /tmp folder
+@app.post('/upload')
+async def upload_pdf(file: UploadFile = File(...)):
+    global filename
+    contents = await file.read()
+    with open(f'{UPLOAD_FOLDER}/{file.filename}', 'wb') as f:
+        f.write(contents)
+    filename = file.filename
+    return {"message": "Upload successful"}
