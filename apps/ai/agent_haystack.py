@@ -3,7 +3,6 @@
 
 import logging
 import os
-import io
 # API and KEY set
 
 os.environ["OPENAI_API_KEY"] = ""
@@ -12,11 +11,8 @@ os.environ["LANGFUSE_SECRET_KEY"] = ""
 os.environ["LANGFUSE_HOST"] = ""
 
 # Enable Haystack content tracing
-os.environ["HAYSTACK_CONTENT_TRACING _ENABLED"] = "True"
+os.environ["HAYSTACK_CONTENT_TRACING _ENABLED"] = "False"
 
-logging.basicConfig(level=logging.INFO)
-
-import PyPDF2
 from pathlib import Path
 from getpass import getpass
 from haystack import Pipeline, Document
@@ -61,10 +57,8 @@ class PreProcess:
         self.preprocess_pipeline.connect("document_embedder", "document_writer")
     
     def run_preprocess(self, doc_path):
-        pdf_file = PyPDF2.PdfReader(io.BytesIO(doc_path))
-        print(pdf_file)
-        # document = self.pdf_converter.run(pdf_file)
-        self.preprocess_pipeline.run({"file_type_router": {"sources": [pdf_file]}},
+        doc_path = Path(doc_path)
+        self.preprocess_pipeline.run({"file_type_router": {"sources": [doc_path]}},
                             include_outputs_from=["document_splitter"])
         self.retriever = InMemoryEmbeddingRetriever(self.document_store)
         return self.retriever
@@ -75,7 +69,7 @@ class Agent():
         self.retriever = retriever
         self.api_key = os.environ["OPENAI_API_KEY"]
         self.rag_pipeline = Pipeline()
-        self.tracer = LangfuseConnector("Basic RAG Pipeline")
+        # self.tracer = LangfuseConnector("Basic RAG Pipeline")
         self.generator = OpenAIGenerator(model="gpt-4o-2024-05-13")
         self.text_embedder = SentenceTransformersTextEmbedder(model="sentence-transformers/all-MiniLM-L6-v2")
         self.templete = """
@@ -321,7 +315,7 @@ class Agent():
         
     def init(self):
         # Add components to your pipeline
-        self.rag_pipeline.add_component("tracer", self.tracer)
+        # self.rag_pipeline.add_component("tracer", self.tracer)
         self.rag_pipeline.add_component("text_embedder", self.text_embedder)
         self.rag_pipeline.add_component("retriever", self.retriever)
         self.rag_pipeline.add_component("prompt_builder", self.prompt_builder)
@@ -357,10 +351,12 @@ class Agent():
 #     return response
 
 # if __name__ == "__main__":
-#     input_doc = "/Users/jerrychen/Projects/klicker-uzh/apps/ai/data/test-doc.pdf"
+#     input_doc = "apps/ai/tmp/test-doc.pdf"
 #     preprocess = PreProcess()
 #     preprocess.init()
+#     print('preprocess init')
 #     retriever = preprocess.run_preprocess(input_doc)
+#     print('retriever init')
 #     agent = Agent(retriever=retriever)
 #     agent.init()
 #     response = agent.run_agent(5, "English")
