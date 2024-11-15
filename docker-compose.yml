@@ -33,6 +33,18 @@ services:
     networks:
       - klicker
 
+  klickeraifinal:
+    image:  qingyuleo/klickeraifinal:latest
+    container_name: klickeraifinal
+    ports:
+      - "8000:8000"
+    networks:
+      - klicker
+    volumes:
+      - ./apps/ai:/app  # 使用相对路径
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+
   reverse_proxy_wsl:
     image: docker.io/library/traefik:v2.10
     command:
