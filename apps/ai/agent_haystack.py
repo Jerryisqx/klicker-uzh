@@ -1,5 +1,5 @@
-# Galaxy
-# time：2024/9/15 11:43
+# # Galaxy
+# # time：2024/9/15 11:43
 
 import logging
 import os
@@ -107,7 +107,7 @@ class Agent():
                 Back: [generate options and answers in given JSON structure]
 
 
-            Here is the format of each type of question:
+             Here is the format of each type of question:
 
                 Single Choice (Should ONLY have ONE right choice)
                     Single Choice
@@ -153,12 +153,12 @@ class Agent():
                             "hasAnswerFeedbacks": true
                         }
                 
-                Important guidelines of Single Choice question:
-                1. Each option should be indexed starting from 0
-                2. Only ONE option should have "correct": true
-                3. The correct answer should include a detailed explanatory feedback
-                4. Incorrect answers should have brief feedback
-                5. Always include the displayMode, hasSampleSolution, and hasAnswerFeedbacks fields
+                 Important guidelines of Single Choice question:
+                 1. Each option should be indexed starting from 0
+                 2. Only ONE option should have "correct": true
+                 3. The correct answer should include a detailed explanatory feedback
+                 4. Incorrect answers should have brief feedback
+                 5. Always include the displayMode, hasSampleSolution, and hasAnswerFeedbacks fields
              
                 Multiple Choices (Should have TWO or More right choices)
                     Multiple Choices
@@ -204,11 +204,11 @@ class Agent():
                             "hasAnswerFeedbacks": true
                         }
   
-                Important guidelines:
-                1. Each option should be indexed starting from 0
-                2. Multiple options should have multiple "correct": true (at least 2 correct answers)
-                3. All answers (both correct and incorrect) should include detailed explanatory feedback
-                4. Always include the displayMode, hasSampleSolution, and hasAnswerFeedbacks fields
+                 Important guidelines:
+                 1. Each option should be indexed starting from 0
+                 2. Multiple options should have multiple "correct": true (at least 2 correct answers)
+                 3. All answers (both correct and incorrect) should include detailed explanatory feedback
+                 4. Always include the displayMode, hasSampleSolution, and hasAnswerFeedbacks fields
                 
                 Numerical
                     Numerical
@@ -279,9 +279,9 @@ class Agent():
                             "hasAnswerFeedbacks": true
                         }
 
-                Important features:
-                1. Each statement is independently true or false
-                2. All statements should be complete sentences that can be evaluated as true or false
+                 Important features:
+                 1. Each statement is independently true or false
+                 2. All statements should be complete sentences that can be evaluated as true or false
 
                 Content
                     Content
@@ -303,13 +303,13 @@ class Agent():
                             "answers: [insert right answer here]
                         }
                         
-            {% for doc in documents %}
-                    {{ doc.content }}
-                {% endfor %}
+             {% for doc in documents %}
+                     {{ doc.content }}
+                 {% endfor %}
 
-                \nQuestion: {{question}}
-                \nAnswer:
-        """
+                 \nQuestion: {{question}}
+                 \nAnswer:
+         """
         self.prompt_builder = PromptBuilder(template=self.templete)
         self.answer_builder = AnswerBuilder()
         
@@ -341,14 +341,14 @@ class Agent():
     
     
 
-# def run_agent(pipeline,question):
+# # def run_agent(pipeline,question):
 
-#     response = pipeline.run(
-#         {"text_embedder": {"text": question},
-#          "prompt_builder": {"question": question},
-#          "answer_builder": {"query": question},
-#          })
-#     return response
+# #     response = pipeline.run(
+# #         {"text_embedder": {"text": question},
+# #          "prompt_builder": {"question": question},
+# #          "answer_builder": {"query": question},
+# #          })
+# #     return response
 
 # if __name__ == "__main__":
 #     input_doc = "apps/ai/tmp/test-doc.pdf"
@@ -362,5 +362,5 @@ class Agent():
 #     response = agent.run_agent(5, "English")
 #     generated_text = response['answer_builder']['answers'][0].data
 
-#     with open('generate.txt', 'w') as f:
-#         f.write(generated_text)
+# #     with open('generate.txt', 'w') as f:
+# #         f.write(generated_text)

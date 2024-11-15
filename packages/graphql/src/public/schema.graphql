@@ -361,6 +361,12 @@ A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `dat
 """
 scalar Date
 
+enum DifficultyLevel {
+  EASY
+  HARD
+  MEDIUM
+}
+
 union Element = ChoicesElement | ContentElement | FlashcardElement | FreeTextElement | NumericalElement
 
 union ElementData = ChoicesElementData | ContentElementData | FlashcardElementData | FreeTextElementData | NumericalElementData
@@ -1381,6 +1387,7 @@ type Query {
   practiceQuiz(id: String!): PracticeQuiz
   publicParticipantProfile(participantId: String!): Participant
   question(id: Int!): Element
+  questionDifficulty(id: Int!): DifficultyLevel!
   runningSessions(shortname: String!): [Session!]
   runningSessionsCourse(courseId: String!): [Session!]
   self: Participant

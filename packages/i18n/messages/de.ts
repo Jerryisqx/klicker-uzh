@@ -21,6 +21,15 @@ export default {
     READY: {
       statusLabel: 'Bereit',
     },
+    EASY: {
+      difficultyLabel: 'Einfach',
+    },
+    MEDIUM: {
+      difficultyLabel: 'Medium',
+    },
+    HARD: {
+      difficultyLabel: 'Hart',
+    },
     SC: {
       short: 'SC',
       typeLabel: 'Single Choice (SC)',
@@ -785,9 +794,6 @@ Da die KlickerUZH-App noch nicht im iOS-App-Store verfügbar ist, folgen Sie die
       badQuestion: 'Schlechte Frage',
       english: 'Englisch',
       german: 'Deutsch',
-      easy: 'Einfach',
-      medium: 'Medium',
-      hard:'Hart',
     },
     support: {
       modalTitle: 'Support KlickerUZH',
