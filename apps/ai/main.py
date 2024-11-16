@@ -17,7 +17,7 @@ app = FastAPI()
 
 # Initialize Prisma client
 db = Prisma()
-os.environ['DATABASE_URL'] = 'postgresql://klicker:klicker@host.docker.internal:5432/klicker'
+os.environ['DATABASE_URL'] = 'postgresql://klicker:klicker@192.168.254.170:5432/klicker'
 db.connect()
 # CORS 配置：允许来自前端的跨域请求
 app.add_middleware(

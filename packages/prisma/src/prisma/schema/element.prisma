@@ -109,7 +109,6 @@ model ElementGenerated {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  difficulty String
 
   @@unique([ownerId, originalId])
   @@map("ElementGenerated")

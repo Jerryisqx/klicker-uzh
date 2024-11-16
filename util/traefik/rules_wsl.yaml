@@ -41,39 +41,50 @@ http:
       entrypoints:
         - 'web'
       service: 'func-response-processor'
+    
+    klickeraifinal:
+      rule: 'Host(`klickeraifinal.klicker.com`)'
+      entrypoints:
+        - 'web'
+      service: 'klickeraifinal'
 
   services:
     api:
       loadBalancer:
         servers:
-          - url: 'http://172.25.8.0:3000'
+          - url: 'http://192.168.254.170:3000'
 
     pwa:
       loadBalancer:
         servers:
-          - url: 'http://172.25.8.0:3001'
+          - url: 'http://192.168.254.170:3001'
 
     manage:
       loadBalancer:
         servers:
-          - url: 'http://172.25.8.0:3002'
+          - url: 'http://192.168.254.170:3002'
 
     control:
       loadBalancer:
         servers:
-          - url: 'http://172.25.8.0:3003'
+          - url: 'http://192.168.254.170:3003'
 
     auth:
       loadBalancer:
         servers:
-          - url: 'http://172.25.8.0:3010'
+          - url: 'http://192.168.254.170:3010'
 
     func-responses:
       loadBalancer:
         servers:
-          - url: 'http://172.25.8.0:7072'
+          - url: 'http://192.168.254.170:7072'
 
     func-response-processor:
       loadBalancer:
         servers:
-          - url: 'http://172.25.8.0:7073'
+          - url: 'http://192.168.254.170:7073'
+    
+    klickeraifinal:
+      loadBalancer:
+        servers:
+          - url: 'http://192.168.254.170:8000'
