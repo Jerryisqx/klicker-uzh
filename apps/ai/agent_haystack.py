@@ -11,7 +11,7 @@ os.environ["LANGFUSE_SECRET_KEY"] = ""
 os.environ["LANGFUSE_HOST"] = ""
 
 # Enable Haystack content tracing
-os.environ["HAYSTACK_CONTENT_TRACING _ENABLED"] = "False"
+# os.environ["HAYSTACK_CONTENT_TRACING _ENABLED"] = "False"
 
 from pathlib import Path
 from getpass import getpass

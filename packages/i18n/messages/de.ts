@@ -794,6 +794,7 @@ Da die KlickerUZH-App noch nicht im iOS-App-Store verfügbar ist, folgen Sie die
       chooseDifficulty:'Wählen Sie den Schwierigkeitsgrad der Frage, oder LUCK, wenn Sie unsicher sind',
       random: 'LUCK',
       rateQuestion: 'Frage Bewerten',
+      rateCompleted:'Bewertung abgeschlossen',
       english: 'Englisch',
       german: 'Deutsch',
       rate: 'Bewerten Sie die Frage',

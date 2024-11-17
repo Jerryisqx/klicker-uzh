@@ -109,18 +109,26 @@ function Question({
 }: QuestionProps): React.ReactElement {
   const t = useTranslations()
   const [isModificationModalOpen, setIsModificationModalOpen] = useState(false)
-  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [isRated, setIsRated] = useState(false);  // 用来标识是否已评分
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false)
   const [isDuplicationModalOpen, setIsDuplicationModalOpen] = useState(false)
   const [isDeletionModalOpen, setIsDeletionModalOpen] = useState(false)
   const [deleteQuestion, { loading: deleting }] = useMutation(
     DeleteQuestionDocument
   )
   
+
   const { data: difficultyData, loading: loadingDifficulty, error: errorDifficulty,} = useQuery(GetQuestionDifficultyDocument, {
     variables: { id },
   });
 
   const difficulty = difficultyData?.questionDifficulty;
+
+  // refresh the title after submitting rate
+  const handleRatingCompleted = () => {
+    setIsRated(true);  
+    setIsRatingModalOpen(false);  
+  };
   
   //Determine which subpage we are in
   const { isGeneratedPage } = usePageSource();
@@ -252,11 +260,16 @@ function Question({
                     root: 'py-3 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition',
                   }}
                   onClick={() => setIsRatingModalOpen(true)}
+                  aria-label={isRated ? 'Rate Completed' : 'Rate Question'}
                 >
                   <Button.Icon>
                     <FontAwesomeIcon icon={faThumbsUp} />
                   </Button.Icon>
-                  <Button.Label>{t('manage.aiRelate.rateQuestion')}</Button.Label>
+                  <Button.Label>
+                    {isRated
+                      ? t('manage.aiRelate.rateCompleted')  
+                      : t('manage.aiRelate.rateQuestion')}
+                  </Button.Label>
                 </Button>
             
                 {/*Display rating modal*/}
@@ -265,11 +278,13 @@ function Question({
                     isOpen={isRatingModalOpen}
                     handleSetIsOpen={setIsRatingModalOpen}
                     questionId={id}
+                    handleRatingCompleted={handleRatingCompleted} 
                   />
                 )}
               </>
 
             )}
+
 
             {!isGeneratedPage && (
               <>

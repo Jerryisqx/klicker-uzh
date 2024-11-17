@@ -12,6 +12,8 @@ from datetime import datetime
 from agent_haystack import PreProcess, Agent
 from prisma import Prisma
 
+# set the expiration time
+FILE_EXPIRATION_TIME = timedelta(minutes=60)
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
@@ -20,13 +22,13 @@ app = FastAPI()
 db = Prisma()
 os.environ['DATABASE_URL'] = 'postgresql://klicker:klicker@host.docker.internal:5432/klicker'
 db.connect()
-# CORS 配置：允许来自前端的跨域请求
+# CORS ser：allow the requests from frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 允许的来源
+    allow_origins=["*"],  # allow all origins
     allow_credentials=True,
-    allow_methods=["*"],  # 允许所有方法
-    allow_headers=["*"],  # 允许所有头部
+    allow_methods=["*"],  # allow all methods
+    allow_headers=["*"],  # allow all headers
 )
 
 # 设置上传文件的基础目录

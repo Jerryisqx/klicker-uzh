@@ -796,6 +796,7 @@ Since the KlickerUZH app is not yet available on the iOS App Store, follow these
       chooseDifficulty:'Choose Difficulty Level of Question, or LUCK if unsure',
       random: 'LUCK',
       rateQuestion: 'Rate Question',
+      rateCompleted:'Rate Completed',
       english: 'English',
       german: 'German',
       rate: 'Rate the Question',

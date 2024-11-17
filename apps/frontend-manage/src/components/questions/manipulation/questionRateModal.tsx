@@ -8,9 +8,10 @@ interface RatingModalProps {
   isOpen: boolean;
   handleSetIsOpen: (open: boolean) => void;
   questionId?: number;
+  handleRatingCompleted: () => void;
 }
 
-function RatingModal({ isOpen, handleSetIsOpen, questionId }: RatingModalProps): React.ReactElement {
+function RatingModal({ isOpen, handleSetIsOpen, questionId, handleRatingCompleted}: RatingModalProps): React.ReactElement {
   const [helpfulness, setHelpfulness] = useState(3);
   const [difficultyRate, setDifficultyRate] = useState(3);
   const [typeRate, setTypeRate] = useState(3);
@@ -37,7 +38,8 @@ function RatingModal({ isOpen, handleSetIsOpen, questionId }: RatingModalProps):
         },
       });
       console.log('Rating submitted successfully');
-      handleSetIsOpen(false); 
+      handleRatingCompleted();  
+      handleSetIsOpen(false);  
     } catch (error) {
       console.error('Error submitting rating:', error);
     }

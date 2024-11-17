@@ -41,9 +41,19 @@ services:
     networks:
       - klicker
     volumes:
-      - ./apps/ai:/app  # 使用相对路径
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-
+      - ./apps/ai:/app
+      - ./apps/ai/prisma/schema:/app/prisma/schema
+      - ./packages/prisma/src/prisma/schema:/app/prisma1/schema
+      - ./doppler.yaml:/root/doppler.yaml
+    environment:
+      - DOPPLER_TOKEN=place_your_token_here
+    command: >
+      sh -c "
+      cp /app/prisma1/schema/*.prisma /app/prisma/schema/ &&
+      rm -f /app/prisma/schema/js.prisma &&
+      prisma generate &&
+      uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      "
 
   reverse_proxy_wsl:
     image: docker.io/library/traefik:v2.10
