@@ -380,18 +380,25 @@ export const Element = builder.unionType('Element', {
   },
 })
 
-//Add new three for manipulate the user score of generated question only
-export interface IElementGenerated {
+//Add new for manipulate the user rate of generated question only
+export interface IRateQuestion {
   id: number;
-  score: number;
+  helpfulness: number;
+  difficultyRate: number;
+  typeRate: number;
+  relevance: number;
 }
-export const ElementGeneratedRef = builder.objectRef<Pick<IElementGenerated, 'id' | 'score'>>('ElementGenerated');
-export const ElementGenerated = ElementGeneratedRef.implement({
+export const RateQuestionRef = builder.objectRef<IRateQuestion>('RateQuestion');
+export const RateQuestion = RateQuestionRef.implement({
   fields: (t) => ({
     id: t.exposeInt('id'),
-    score: t.exposeInt('score'),
+    helpfulness: t.exposeInt('helpfulness'),
+    difficultyRate: t.exposeInt('difficultyRate'),
+    typeRate: t.exposeInt('typeRate'),
+    relevance: t.exposeInt('relevance'),
   }),
 });
+
 
 
 interface IArchivedElement {

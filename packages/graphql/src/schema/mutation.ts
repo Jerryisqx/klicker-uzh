@@ -43,7 +43,7 @@ import {
 import {
   ArchivedElement,
   Element,
-  ElementGenerated,
+  RateQuestion,
   OptionsChoicesInput,
   OptionsFreeTextInput,
   OptionsNumericalInput,
@@ -577,15 +577,21 @@ export const Mutation = builder.mutationType({
         },
       }),
 
-      updateElementGeneratedScore: t.withAuth(asUserFullAccess).field({
+      rateQuestion: t.withAuth(asUserFullAccess).field({
         nullable: true,
-        type: ElementGenerated,
+        type: RateQuestion,
         args: {
           id: t.arg.int({ required: true }),
-          score: t.arg.int({ required: true }),
+          helpfulness: t.arg.int({ required: true }),
+          difficultyRate: t.arg.int({ required: true }),
+          typeRate: t.arg.int({ required: true }),
+          relevance: t.arg.int({ required: true }),
         },
-        resolve: (_, args, ctx) => QuestionService.updateElementGeneratedScore(args, ctx),
+        resolve: (_, args, ctx) => {
+          return QuestionService.rateQuestion(args, ctx);
+        },
       }),
+      
       
       deleteParticipantAccount: t.withAuth(asParticipant).boolean({
         nullable: true,

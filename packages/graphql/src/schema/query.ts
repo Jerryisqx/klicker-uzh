@@ -214,7 +214,7 @@ export const Query = builder.queryType({
 
       //add new for get question difficulty
       questionDifficulty: asUser.field({
-        type: DifficultyLevel, 
+        type: 'String', 
         args: {
           id: t.arg.int({ required: true }), 
         },

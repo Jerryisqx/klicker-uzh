@@ -12,6 +12,7 @@ from datetime import datetime
 from agent_haystack import PreProcess, Agent
 from prisma import Prisma
 
+
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
@@ -62,11 +63,15 @@ def parse_question(context):
         current_question = {}
         part = re.split(r'\n\s*', part)
         current_question['type'] = part[0]
-        current_question['difficulty'] = part[1]
+        diff=part[1].upper()
+        if ":" in diff:
+            current_question['difficulty'] = diff.split(":")[1].strip()
+        else:
+            current_question['difficulty'] = diff.strip()
+        # current_question['difficulty'] = diff.split(":")[1].strip()
         current_question['name'] = part[2]
         current_question['question'] = part[3][10:]
         json_text = ''
-
         for block in part[4:]:
             try:
                 json_text += block
@@ -90,9 +95,19 @@ def map_question_type(generated_type):
     }
     return type_mapping.get(generated_type, 'CONTENT')  # Default to CONTENT if type not found
 
+def map_difficulty_level(difficulty_level):
+    difficulty_map = {
+        "EASY": "EASY",
+        "MEDIUM": "MEDIUM",
+        "HARD": "HARD"
+    }
+    return difficulty_map.get(difficulty_level, 'EASY')
+
+
 async def insert_questions_to_db(questions):
     try:
         for question in questions:
+
             db.elementgenerated.create(
                 data={
                     "content": question['question'],
@@ -102,13 +117,14 @@ async def insert_questions_to_db(questions):
                     "ownerId": str(uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")),  # 转换为字符串
                     "createdAt": datetime.now(),
                     "updatedAt": datetime.now(),
-                    "difficulty": question['difficulty']
+                    "difficulty": map_difficulty_level(question['difficulty']),
                 }
             )
         logging.info(f"Successfully inserted {len(questions)} questions into the database.")
     except Exception as e:
         logging.error(f"Error inserting questions into the database: {e}")
         raise
+
 
 @app.post('/generate')
 async def generate_questions(request: GenerateQuestionsRequest):

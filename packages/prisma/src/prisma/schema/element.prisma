@@ -6,13 +6,6 @@ enum ElementStatus {
   READY
 }
 
-//Add for generatedQuestion
-enum DifficultyLevel {
-  EASY
-  MEDIUM
-  HARD
-}
-
 enum ElementType {
   // TODO: remove old types, to be migrated to new ones
   SC
@@ -92,7 +85,7 @@ model ElementGenerated {
   options Json
 
   status ElementStatus @default(READY)
-  difficulty DifficultyLevel @default(EASY)
+  difficulty String
   type   ElementType
 
   tags Tag[] @relation("ElementGeneratedTags")
@@ -101,15 +94,17 @@ model ElementGenerated {
   elementInstances ElementInstance[] @relation("ElementGeneratedElementInstances")
   feedbacks ElementFeedback[] @relation("ElementGeneratedFeedbacks")
 
-  score Int @default(0) // Used to track user's feedback for each question
+  helpfulness Int?
+  typeRate Int?
+  difficultyRate Int?
+  relevance Int?
+  score Int?
 
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   ownerId String @db.Uuid
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  difficulty String
 
   @@unique([ownerId, originalId])
   @@map("ElementGenerated")

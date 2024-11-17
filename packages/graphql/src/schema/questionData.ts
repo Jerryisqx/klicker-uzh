@@ -15,11 +15,6 @@ export const ElementStatus = builder.enumType('ElementStatus', {
   values: Object.values(DB.ElementStatus),
 })
 
-//Add for difficulty level
-export const DifficultyLevel = builder.enumType('DifficultyLevel', {
-  values: Object.values(DB.DifficultyLevel),
-})
-
 export const ElementInstanceType = builder.enumType('ElementInstanceType', {
   values: Object.values(DB.ElementInstanceType),
 })
