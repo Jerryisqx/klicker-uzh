@@ -33,9 +33,19 @@ services:
     networks:
       - klicker
 
-  klickeraifinal:
-    image:  qingyuleo/klickeraifinal:latest
-    container_name: klickeraifinal
+  # apiai:
+  #   image:  qingyuleo/apiai:latest
+  #   container_name: apiai
+  #   ports:
+  #     - "8000:8000"
+  #   networks:
+  #     - klicker
+  #   volumes:
+  #     - ./apps/ai:/app  # 使用相对路径
+  #   command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+  apiai:
+    image: qingyuleo/aiapi:v1.0.0
+    container_name: apiai
     ports:
       - "8000:8000"
     networks:

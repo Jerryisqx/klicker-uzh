@@ -11,8 +11,10 @@ import uuid
 from datetime import datetime
 from agent_haystack import PreProcess, Agent
 from prisma import Prisma
+import asyncio
+from datetime import timedelta
 
-# set the expiration time
+# 设置文件过期时间为1分钟
 FILE_EXPIRATION_TIME = timedelta(minutes=60)
 
 logging.basicConfig(level=logging.INFO)
@@ -20,21 +22,22 @@ app = FastAPI()
 
 # Initialize Prisma client
 db = Prisma()
-os.environ['DATABASE_URL'] = 'postgresql://klicker:klicker@host.docker.internal:5432/klicker'
+os.environ['DATABASE_URL'] = 'postgresql://klicker:klicker@172.26.56.188:5432/klicker'
 db.connect()
-# CORS ser：allow the requests from frontend
+# CORS 配置：允许来自前端的跨域请求
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # allow all origins
+    allow_origins=["*"],  # 允许的来源
     allow_credentials=True,
-    allow_methods=["*"],  # allow all methods
-    allow_headers=["*"],  # allow all headers
+    allow_methods=["*"],  # 允许所有方法
+    allow_headers=["*"],  # 允许所有头部
 )
 
 # 设置上传文件的基础目录
 UPLOAD_FOLDER = 'tmp'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+uploaded_files = {}
 
 # 请求体模型
 class GenerateQuestionsRequest(BaseModel):
@@ -177,4 +180,26 @@ async def upload_pdf(file: UploadFile = File(...)):
     with open(f'{UPLOAD_FOLDER}/{file.filename}', 'wb') as f:
         f.write(contents)
     filename = file.filename
+    file_path=os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
+    uploaded_files[file_path] = datetime.now()
     return {"message": "Upload successful"}
+
+# 定义删除过期文件的任务
+async def delete_expired_files():
+    while True:
+        now = datetime.now()
+        for file_path, upload_time in list(uploaded_files.items()):
+            # 如果文件过期，则删除文件
+            if now - upload_time > FILE_EXPIRATION_TIME:
+                try:
+                    os.remove(file_path)
+                    del uploaded_files[file_path]  # 从记录中删除文件
+                    logging.info(f"Deleted expired file: {file_path}")
+                except Exception as e:
+                    logging.info(f"Failed to delete file {file_path}: {str(e)}")
+        await asyncio.sleep(60)  # 每60秒检查一次
+
+# 启动定时任务
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(delete_expired_files())
