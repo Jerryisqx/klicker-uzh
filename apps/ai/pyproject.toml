@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "@klicker-uzh/ai-gen"
+version = "0.0.1"
+description = ""
+authors = ["..."]
+license = "AGPL-3.0"
+readme = "README.md"
+packages = [{include = "@klicker_uzh"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+haystack-ai = "2.6.1"
+haystack-experimental = "0.3.0"
+fastapi = { version = "0.115.4", extras = ["standard"] }
+prisma = "0.14.0"
+langfuse = "2.53.9"
+langfuse-haystack = "0.5.0"
+python-dotenv = "1.0.1"
+python-multipart = "0.0.17"
+pypdf = "5.1.0"
+torch = [
+  # for macos with ARM (would have to be changed for macos Intel)
+  { platform = "darwin", url = "https://download.pytorch.org/whl/cpu/torch-2.5.1-cp312-none-macosx_11_0_arm64.whl" },
+  { platform = "linux", url = "https://download.pytorch.org/whl/cpu/torch-2.5.1%2Bcpu-cp312-cp312-linux_x86_64.whl" }
+]
+sentence-transformers = "3.3.1"
+
+[tool.poetry.dev-dependencies]
+poethepoet = "0.27.0"
+ipykernel = "6.29.5"
+
+[tool.poe.tasks]
+generate = "prisma generate"
+dev = "doppler run --config dev -- fastapi dev main.py"
+export = "poetry export --without-hashes > requirements.txt"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
