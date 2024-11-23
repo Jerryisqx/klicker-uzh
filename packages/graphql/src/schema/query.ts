@@ -38,7 +38,6 @@ import {
   StackFeedback,
 } from './practiceQuizzes.js'
 import { Element, Tag } from './question.js'
-import { DifficultyLevel } from './questionData.js'
 import {
   Feedback,
   RunningLiveQuizSummary,

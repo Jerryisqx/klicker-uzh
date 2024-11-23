@@ -5,15 +5,9 @@ query GetLatestNQuestions($limit: Int!) {
     ... on ChoicesElement {
       id
       name
-      status
       type
       content
 
-      pointsMultiplier
-      version
-
-      isArchived
-      isDeleted
       createdAt
       updatedAt
 
@@ -29,28 +23,17 @@ query GetLatestNQuestions($limit: Int!) {
           value
         }
       }
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on NumericalElement {
       id
       name
-      status
       type
       content
 
-      pointsMultiplier
-      version
-
-      isArchived
-      isDeleted
       createdAt
       updatedAt
+
 
       options {
         __typename
@@ -70,26 +53,14 @@ query GetLatestNQuestions($limit: Int!) {
           max
         }
       }
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on FreeTextElement {
       id
       name
-      status
       type
       content
 
-      pointsMultiplier
-      version
-
-      isArchived
-      isDeleted
       createdAt
       updatedAt
 
@@ -103,56 +74,26 @@ query GetLatestNQuestions($limit: Int!) {
           maxLength
         }
       }
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on FlashcardElement {
       id
       name
-      status
       type
       content
 
-      pointsMultiplier
-      version
-
-      isArchived
-      isDeleted
       createdAt
       updatedAt
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on ContentElement {
       id
       name
-      status
       type
       content
 
-      pointsMultiplier
-      version
-
-      isArchived
-      isDeleted
       createdAt
       updatedAt
-
-      tags {
-        id
-        name
-        order
-      }
     }
   }
 }

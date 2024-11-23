@@ -57,6 +57,7 @@ services:
       - ./doppler.yaml:/root/doppler.yaml
     environment:
       - DOPPLER_TOKEN=place_your_token_here
+
     command: >
       sh -c "
       cp /app/prisma1/schema/*.prisma /app/prisma/schema/ &&

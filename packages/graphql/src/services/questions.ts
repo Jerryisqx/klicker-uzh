@@ -100,7 +100,6 @@ export async function getLatestNQuestions(
   const questions = await ctx.prisma.elementGenerated.findMany({
     where: {
       ownerId: ownerId,
-      isDeleted: false, 
     },
     orderBy: {
       createdAt: 'desc', // Fetch latest questions first
@@ -172,13 +171,6 @@ export async function getSingleGeneratedQuestion(
     where: {
       id,
       ownerId: ctx.user.sub,
-    },
-    include: {
-      tags: {
-        orderBy: {
-          order: 'asc',
-        },
-      },
     },
   })
 
