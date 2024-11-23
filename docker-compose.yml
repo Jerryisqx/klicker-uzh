@@ -55,9 +55,7 @@ services:
       - ./apps/ai/prisma/schema:/app/prisma/schema
       - ./packages/prisma/src/prisma/schema:/app/prisma1/schema
       # - ./doppler.yaml:/root/doppler.yaml
-    environment:
-      - OPENAI_API_KEY
-      - DATABASE_URL_1
+
     command: >
       sh -c "
       cp /app/prisma1/schema/*.prisma /app/prisma/schema/ &&
