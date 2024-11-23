@@ -43,9 +43,9 @@ services:
   #   volumes:
   #     - ./apps/ai:/app  # 使用相对路径
   #   command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-  apiai:
-    image: qingyuleo/aiapi:v1.0.0
-    container_name: apiai
+  apiai2:
+    image: qingyuleo/aiapi:v2.0.0
+    container_name: apiai2
     ports:
       - "8000:8000"
     networks:
@@ -54,9 +54,13 @@ services:
       - ./apps/ai:/app
       - ./apps/ai/prisma/schema:/app/prisma/schema
       - ./packages/prisma/src/prisma/schema:/app/prisma1/schema
-      - ./doppler.yaml:/root/doppler.yaml
+      # - ./doppler.yaml:/root/doppler.yaml
     environment:
-      - DOPPLER_TOKEN=dp.st.dev.j9Aire2EAb6uS33mbacJPXk0ZCbD4TwRmkZqnURJQOI
+      - DOPPLER_PROJECT   # Doppler 配置变量
+      - DOPPLER_ENVIRONMENT
+      - DOPPLER_CONFIG
+      - OPENAI_API_KEY
+      - DATABASE_URL_1
     command: >
       sh -c "
       cp /app/prisma1/schema/*.prisma /app/prisma/schema/ &&
