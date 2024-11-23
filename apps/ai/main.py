@@ -11,6 +11,11 @@ import uuid
 from datetime import datetime
 from agent_haystack import PreProcess, Agent
 from prisma import Prisma
+import asyncio
+from datetime import timedelta
+
+# 设置文件过期时间为1分钟
+FILE_EXPIRATION_TIME = timedelta(minutes=60)
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
@@ -32,6 +37,7 @@ app.add_middleware(
 UPLOAD_FOLDER = 'tmp'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+uploaded_files = {}
 
 # 请求体模型
 class GenerateQuestionsRequest(BaseModel):
@@ -62,11 +68,15 @@ def parse_question(context):
         current_question = {}
         part = re.split(r'\n\s*', part)
         current_question['type'] = part[0]
-        current_question['difficulty'] = part[1]
+        diff=part[1].upper()
+        if ":" in diff:
+            current_question['difficulty'] = diff.split(":")[1].strip()
+        else:
+            current_question['difficulty'] = diff.strip()
+        # current_question['difficulty'] = diff.split(":")[1].strip()
         current_question['name'] = part[2]
         current_question['question'] = part[3][10:]
         json_text = ''
-
         for block in part[4:]:
             try:
                 json_text += block
@@ -90,9 +100,19 @@ def map_question_type(generated_type):
     }
     return type_mapping.get(generated_type, 'CONTENT')  # Default to CONTENT if type not found
 
+def map_difficulty_level(difficulty_level):
+    difficulty_map = {
+        "EASY": "EASY",
+        "MEDIUM": "MEDIUM",
+        "HARD": "HARD"
+    }
+    return difficulty_map.get(difficulty_level, 'EASY')
+
+
 async def insert_questions_to_db(questions):
     try:
         for question in questions:
+
             db.elementgenerated.create(
                 data={
                     "content": question['question'],
@@ -102,13 +122,14 @@ async def insert_questions_to_db(questions):
                     "ownerId": str(uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")),  # 转换为字符串
                     "createdAt": datetime.now(),
                     "updatedAt": datetime.now(),
-                    "difficulty": question['difficulty']
+                    "difficulty": map_difficulty_level(question['difficulty']),
                 }
             )
         logging.info(f"Successfully inserted {len(questions)} questions into the database.")
     except Exception as e:
         logging.error(f"Error inserting questions into the database: {e}")
         raise
+
 
 @app.post('/generate')
 async def generate_questions(request: GenerateQuestionsRequest):
@@ -159,4 +180,26 @@ async def upload_pdf(file: UploadFile = File(...)):
     with open(f'{UPLOAD_FOLDER}/{file.filename}', 'wb') as f:
         f.write(contents)
     filename = file.filename
+    file_path=os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
+    uploaded_files[file_path] = datetime.now()
     return {"message": "Upload successful"}
+
+# 定义删除过期文件的任务
+async def delete_expired_files():
+    while True:
+        now = datetime.now()
+        for file_path, upload_time in list(uploaded_files.items()):
+            # 如果文件过期，则删除文件
+            if now - upload_time > FILE_EXPIRATION_TIME:
+                try:
+                    os.remove(file_path)
+                    del uploaded_files[file_path]  # 从记录中删除文件
+                    logging.info(f"Deleted expired file: {file_path}")
+                except Exception as e:
+                    logging.info(f"Failed to delete file {file_path}: {str(e)}")
+        await asyncio.sleep(60)  # 每60秒检查一次
+
+# 启动定时任务
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(delete_expired_files())

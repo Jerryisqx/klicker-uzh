@@ -14,16 +14,14 @@ import { twMerge } from 'tailwind-merge'
 // import QuestionDuplicationModal from './QuestionDuplicationModal'
 import { useMutation, useQuery } from '@apollo/client'
 import { faCopy } from '@fortawesome/free-regular-svg-icons'
-import { faPencil, faTrash, faThumbsUp, faThumbsDown } from '@fortawesome/free-solid-svg-icons'
+import { faPencil, faTrash, faThumbsUp} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   DeleteQuestionDocument,
   ElementStatus,
   ElementType,
   GetUserQuestionsDocument,
-  UpdateElementGeneratedScoreDocument,
   Tag,
-  DifficultyLevel,
   GetQuestionDifficultyDocument,
 } from '@klicker-uzh/graphql/dist/ops'
 import { Ellipsis } from '@klicker-uzh/markdown'
@@ -32,6 +30,7 @@ import { useTranslations } from 'next-intl'
 import ElementEditModal, {
   ElementEditMode,
 } from './manipulation/ElementEditModal'
+import RatingModal from './manipulation/questionRateModal'
 import QuestionTags from './QuestionTags'
 import { usePageSource } from 'src/pageContext/PageContext'
 // import QuestionTags from './QuestionTags'
@@ -44,12 +43,12 @@ const StatusColors: Record<ElementStatus, string> = {
   [ElementStatus.Ready]: 'bg-green-400',
 }
 
-
-const DifficultyColors: Record<DifficultyLevel, string> = {
-  [DifficultyLevel.Easy]: 'bg-green-400',
-  [DifficultyLevel.Medium]: 'bg-yellow-400',
-  [DifficultyLevel.Hard]: 'bg-red-400',
+const DifficultyColors: Record<string, string> = {
+  EASY: 'bg-green-400',
+  MEDIUM: 'bg-yellow-400',
+  HARD: 'bg-red-400',
 };
+
 
 const ElementIcons: Record<ElementType, IconDefinition> = {
   FLASHCARD: faListRegular,
@@ -110,58 +109,29 @@ function Question({
 }: QuestionProps): React.ReactElement {
   const t = useTranslations()
   const [isModificationModalOpen, setIsModificationModalOpen] = useState(false)
+  const [isRated, setIsRated] = useState(false);  // 用来标识是否已评分
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false)
   const [isDuplicationModalOpen, setIsDuplicationModalOpen] = useState(false)
   const [isDeletionModalOpen, setIsDeletionModalOpen] = useState(false)
   const [deleteQuestion, { loading: deleting }] = useMutation(
     DeleteQuestionDocument
   )
-  const [updateScore] = useMutation(UpdateElementGeneratedScoreDocument)
+  
 
   const { data: difficultyData, loading: loadingDifficulty, error: errorDifficulty,} = useQuery(GetQuestionDifficultyDocument, {
     variables: { id },
   });
 
   const difficulty = difficultyData?.questionDifficulty;
+
+  // refresh the title after submitting rate
+  const handleRatingCompleted = () => {
+    setIsRated(true);  
+    setIsRatingModalOpen(false);  
+  };
   
-
-  
-
-
   //Determine which subpage we are in
   const { isGeneratedPage } = usePageSource();
-  // Track button states
-  const [isGoodQuestionClicked, setIsGoodQuestionClicked] = useState(false);
-  const [isBadQuestionClicked, setIsBadQuestionClicked] = useState(false);
-  
-  // Toggle button and score
-  const handleGoodQuestionClick = async () => {
-    const newGoodState = !isGoodQuestionClicked;
-    setIsGoodQuestionClicked(newGoodState);
-    setIsBadQuestionClicked(false); // Reset Bad Question button
-    handleScoreUpdate(newGoodState ? 1 : 0);
-  };
-  
-  const handleBadQuestionClick = async () => {
-    const newBadState = !isBadQuestionClicked;
-      setIsBadQuestionClicked(newBadState);
-      setIsGoodQuestionClicked(false); // Reset Good Question button
-      handleScoreUpdate(newBadState ? -1 : 0);
-  };
-
-  const handleScoreUpdate = async (scoreValue: number) => {
-    try {
-      await updateScore({
-        variables: {
-          id, 
-          score: scoreValue,
-        },
-      })
-      console.log('Score updated successfully')
-    } catch (error) {
-      console.error('Error updating score:', error)
-    }
-  }
-  
 
   const [collectedProps, drag] = useDrag({
     item: {
@@ -285,30 +255,36 @@ function Question({
             {/* Add user feedback*/}
             {isGeneratedPage && (
               <>
-              <Button 
-                onClick={handleGoodQuestionClick} 
-                className={{
-                  root:`space-x-2 ${
-                      isGoodQuestionClicked ? 'bg-green-200' : 'bg-white'
-                    } text-sm md:w-36 md:text-base`,}}>
-                <Button.Icon>
-                  <FontAwesomeIcon icon={faThumbsUp} />
-                </Button.Icon>
-                <Button.Label>{t('manage.aiRelate.goodQuestion')}</Button.Label>
-              </Button>
-              <Button 
-                onClick={handleBadQuestionClick} 
-                className={{
-                  root:`space-x-2 ${
-                      isBadQuestionClicked ? 'bg-red-200' : 'bg-white'
-                    } text-sm md:w-36 md:text-base`,}}>
-                <Button.Icon>
-                  <FontAwesomeIcon icon={faThumbsDown} />
-                </Button.Icon>
-                <Button.Label>{t('manage.aiRelate.badQuestion')}</Button.Label>
-              </Button>
+                <Button
+                  className={{
+                    root: 'py-3 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition',
+                  }}
+                  onClick={() => setIsRatingModalOpen(true)}
+                  aria-label={isRated ? 'Rate Completed' : 'Rate Question'}
+                >
+                  <Button.Icon>
+                    <FontAwesomeIcon icon={faThumbsUp} />
+                  </Button.Icon>
+                  <Button.Label>
+                    {isRated
+                      ? t('manage.aiRelate.rateCompleted')  
+                      : t('manage.aiRelate.rateQuestion')}
+                  </Button.Label>
+                </Button>
+            
+                {/*Display rating modal*/}
+                {isRatingModalOpen && (
+                  <RatingModal
+                    isOpen={isRatingModalOpen}
+                    handleSetIsOpen={setIsRatingModalOpen}
+                    questionId={id}
+                    handleRatingCompleted={handleRatingCompleted} 
+                  />
+                )}
               </>
+
             )}
+
 
             {!isGeneratedPage && (
               <>

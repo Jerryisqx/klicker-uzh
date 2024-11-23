@@ -12,7 +12,6 @@ import type { Element } from '@klicker-uzh/graphql/dist/ops'
 import {
     GetLatestNQuestionsDocument,
     ElementType,
-    DifficultyLevel,
   } from '@klicker-uzh/graphql/dist/ops';
 
 export default function Home() {
@@ -38,6 +37,8 @@ export default function Home() {
     const [questionsGenerated, setQuestionsGenerated] = useState(false);
     const [questions, setQuestions] = useState<any[]>([]);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [uploadSuccess, setUploadSuccess] = useState<boolean | null>(null)
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const { loading: loadingQuestions, error: errorQuestions, data: dataQuestions, refetch: refetchQuestions } = useQuery(GetLatestNQuestionsDocument,
         {skip: true,}
@@ -52,6 +53,7 @@ export default function Home() {
 
     // Handle the click event for "Generate Question" button
     const handleGenerateQuestions = async () => {
+        //Test for local database, not using API:
         // try {
         //     const temp = Number(numQuestions);
 
@@ -64,6 +66,7 @@ export default function Home() {
         // } catch (error) {
         //     console.error('Error fetching questions:', error);
         // }
+        setIsGenerating(true); 
         try {
             const response = await fetch('http://localhost:8000/generate', {
                 method: 'POST',
@@ -85,12 +88,15 @@ export default function Home() {
             
         } catch (error) {
             console.error('Error fetching questions:', error);
+        } finally {
+            setIsGenerating(false); 
         }
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files.length > 0) {
             setSelectedFile(event.target.files[0]);
+            setUploadSuccess(null); 
         }
     };
 
@@ -110,9 +116,13 @@ export default function Home() {
 
             if (response.ok) {
                 console.log('File successfully uploaded');
+                setUploadSuccess(true);
+
             }
         } catch (error) {
             console.error('Error uploading file:', error);
+            setUploadSuccess(false);
+
         }
     };
 
@@ -176,8 +186,16 @@ export default function Home() {
                                 root: "w-full py-3 bg-blue-800 text-white font-semibold rounded-lg hover:bg-blue-900 transition",
                             }}
                         >
-                            Upload File
+                            <Button.Label>{t('manage.aiRelate.uploadFile')}</Button.Label>
                         </Button>
+                        {/*Notification of file upload status*/} 
+                        {uploadSuccess === true && (
+                            <div className="mt-2 text-green-600 font-medium">{t('manage.aiRelate.fileSuccess')}</div>
+                        )}
+                        {uploadSuccess === false && (
+                            <div className="mt-2 text-red-600 font-medium">{t('manage.aiRelate.fileFail')}</div>
+                        )}
+
                     </div>
 
                     <div className="space-y-4 mb-6">
@@ -203,10 +221,6 @@ export default function Home() {
                                     {
                                         label: '10',
                                         value: '10',
-                                    },
-                                    {
-                                        label: '15',
-                                        value: '15',
                                     },
                                     {
                                         label: t('manage.aiRelate.random'),
@@ -259,32 +273,32 @@ export default function Home() {
 
                                 items={[
                                     {
-                                        value: ElementType.Content,
                                         label: t(`shared.${ElementType.Content}.typeLabel`),
+                                        value: ElementType.Content,
                                     },
                                     {
-                                        value: ElementType.Flashcard,
                                         label: t(`shared.${ElementType.Flashcard}.typeLabel`),
+                                        value: ElementType.Flashcard,
                                     },
                                     {
-                                        value: ElementType.Sc,
                                         label: t(`shared.${ElementType.Sc}.typeLabel`),
+                                        value: ElementType.Sc,
                                     },
                                     {
-                                        value: ElementType.Mc,
                                         label: t(`shared.${ElementType.Mc}.typeLabel`),
+                                        value: ElementType.Mc,                                        
                                     },
                                     {
-                                        value: ElementType.Kprim,
                                         label: t(`shared.${ElementType.Kprim}.typeLabel`),
+                                        value: ElementType.Kprim,                                       
                                     },
                                     {
-                                        value: ElementType.Numerical,
                                         label: t(`shared.${ElementType.Numerical}.typeLabel`),
+                                        value: ElementType.Numerical,                                        
                                     },
                                     {
-                                        value: ElementType.FreeText,
                                         label: t(`shared.${ElementType.FreeText}.typeLabel`),
+                                        value: ElementType.FreeText,                                       
                                     },
                                     {
                                         label: t('manage.aiRelate.random'),
@@ -310,16 +324,16 @@ export default function Home() {
                             <Select
                                 items={[
                                     {
-                                        label: t(`shared.${DifficultyLevel.Easy}.difficultyLabel`),
-                                        value: DifficultyLevel.Easy,
+                                        label: t('shared.EASY.difficultyLabel'),
+                                        value: "EASY",
                                     },
                                     {
-                                        label: t(`shared.${DifficultyLevel.Medium}.difficultyLabel`),
-                                        value: DifficultyLevel.Medium,
+                                        label: t('shared.MEDIUM.difficultyLabel'),
+                                        value: "MEDIUM",
                                     },
                                     {
-                                        label: t(`shared.${DifficultyLevel.Hard}.difficultyLabel`),
-                                        value: DifficultyLevel.Hard,
+                                        label: t('shared.HARD.difficultyLabel'),
+                                        value: "HARD",
                                     },
                                     {
                                         label: t('manage.aiRelate.random'),
@@ -354,9 +368,11 @@ export default function Home() {
                             }}
                         />
                     </div>
-                    {loadingQuestions && <Loader />}
-                    {errorQuestions && <div>Error: {errorQuestions.message}</div>}
-                    {questionsGenerated && !loadingQuestions && (
+                    {isGenerating ? (
+                        <Loader />
+                    ) : errorQuestions ? (
+                        <div>Error: {errorQuestions.message}</div>
+                    ) : questionsGenerated && !loadingQuestions ? (
                         <QuestionList
                             questions={questions}
                             selectedQuestions={selectedQuestionData}
@@ -380,7 +396,7 @@ export default function Home() {
 
         
                         />
-                    )}
+                    ) : null}
                     </div>
                 </div>
 

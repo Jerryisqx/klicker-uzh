@@ -86,7 +86,7 @@ function ElementEditModal({
   console.log("what is the question ID now:", questionId);
   console.log("show the data", dataQuestion);
   console.log("check status - loading:", loadingQuestion, ", error:", error);
-  console.log("数据结构:", dataQuestion?.generatedQuestion);
+  console.log("data structure:", dataQuestion?.generatedQuestion);
 
   if(error){
     console.error("Error fetching question:", error);

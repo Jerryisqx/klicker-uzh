@@ -117,27 +117,36 @@ export async function getLatestNQuestions(
 
 }
 
-//manipulate the score of each generated questions
-export async function updateElementGeneratedScore(
-  { id, score }: { id: number; score: number },
+//manipulate the rate of each generated questions
+export async function rateQuestion(
+  { id, helpfulness, difficultyRate, typeRate, relevance}: {
+    id: number;
+    helpfulness: number;
+    difficultyRate: number;
+    typeRate: number;
+    relevance: number;
+  },
   ctx: ContextWithUser
 ) {
   return await ctx.prisma.elementGenerated.update({
     where: {
       id: id,
-      ownerId: ctx.user.sub,
     },
     data: {
-      score: score,
+      helpfulness: helpfulness,
+      difficultyRate: difficultyRate,
+      typeRate: typeRate,
+      relevance: relevance,
     },
   });
 }
+
 
 //get difficulty level
 export async function getQuestionDifficulty(
   { id }: { id: number },
   ctx: ContextWithUser
-): Promise<DB.DifficultyLevel>{ 
+) : Promise<string>{ 
   const question = await ctx.prisma.elementGenerated.findUnique({
     where: {
       id: id,
@@ -148,7 +157,7 @@ export async function getQuestionDifficulty(
   });
 
   if (!question) {
-    return DB.DifficultyLevel.EASY; 
+    return "EASY";  
   }
 
   return question.difficulty;

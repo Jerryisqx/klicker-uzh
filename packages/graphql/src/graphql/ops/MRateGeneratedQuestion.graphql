@@ -1,0 +1,9 @@
+mutation RateQuestion($id: Int!, $helpfulness: Int!, $difficultyRate: Int!, $typeRate: Int!, $relevance: Int!) {
+    rateQuestion(id: $id, helpfulness: $helpfulness, difficultyRate: $difficultyRate, typeRate: $typeRate, relevance: $relevance) {
+      id
+      helpfulness
+      difficultyRate
+      typeRate
+      relevance
+    }
+}
