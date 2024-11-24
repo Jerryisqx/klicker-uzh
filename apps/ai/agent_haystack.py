@@ -21,6 +21,7 @@ from haystack.components.writers import DocumentWriter
 from haystack.components.joiners import DocumentJoiner
 from haystack.components.embedders import SentenceTransformersDocumentEmbedder, SentenceTransformersTextEmbedder
 from haystack.components.generators import OpenAIGenerator
+from haystack_integrations.components.generators.anthropic import AnthropicGenerator
 from haystack.components.retrievers.in_memory import InMemoryEmbeddingRetriever
 from haystack.components.builders import PromptBuilder, AnswerBuilder
 from haystack_integrations.components.connectors.langfuse import LangfuseConnector
@@ -60,22 +61,36 @@ class PreProcess:
         self.retriever = InMemoryEmbeddingRetriever(self.document_store)
         return self.retriever
 
-def load_openai_api_key():
+def load_openai_api_key(model):
     try:
+        if model == "openai-gpt":
         # 调用 Doppler CLI 获取密钥
-        result = subprocess.run(
-            ["doppler", "secrets", "get", "OPENAI_API_KEY", "--plain"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        if result.returncode == 0:
-            # 将获取到的密钥加载到环境变量
-            os.environ["OPENAI_API_KEY"] = result.stdout.strip()
-        else:
-            raise RuntimeError(
-                f"Failed to retrieve OPENAI_API_KEY: {result.stderr.strip()}"
+            result = subprocess.run(
+                ["doppler", "secrets", "get", "OPENAI_API_KEY", "--plain"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
             )
+            if result.returncode == 0:
+                # 将获取到的密钥加载到环境变量
+                os.environ["OPENAI_API_KEY"] = result.stdout.strip()
+            else:
+                raise RuntimeError(
+                    f"Failed to retrieve OPENAI_API_KEY: {result.stderr.strip()}"
+                )
+        elif model == "anthropic-claude":
+            result = subprocess.run(
+                ["doppler", "secrets", "get", "ANTHROPIC_API_KEY", "--plain"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            if result.returncode == 0:
+                os.environ["ANTHROPIC_API_KEY"] = result.stdout.strip()
+            else:
+                raise RuntimeError(
+                    f"Failed to retrieve ANTHROPIC_API_KEY: {result.stderr.strip()}"
+                )
     except FileNotFoundError:
         raise RuntimeError("Doppler CLI is not installed or not found in PATH.")
     except Exception as e:
@@ -85,11 +100,16 @@ class Agent():
     def __init__(self, retriever):
         # Openai API Key
         self.retriever = retriever
-        load_openai_api_key()
-        self.api_key = os.environ["OPENAI_API_KEY"]
+        self.model = "openai-gpt"
+        load_openai_api_key(self.model)
+        if self.model == "openai-gpt":
+            self.api_key = os.environ["OPENAI_API_KEY"]
+            self.generator = OpenAIGenerator(model="gpt-4o-2024-05-13")
+        elif self.model == "anthropic-claude":
+            self.api_key = os.environ["ANTHROPIC_API_KEY"]
+            self.generator = AnthropicGenerator(model="claude-2024-05-13")
         self.rag_pipeline = Pipeline()
         # self.tracer = LangfuseConnector("Basic RAG Pipeline")
-        self.generator = OpenAIGenerator(model="gpt-4o-2024-05-13")
         self.text_embedder = SentenceTransformersTextEmbedder(model="sentence-transformers/all-MiniLM-L6-v2")
         self.templete = """
             You are a helpful educational assistant AI designed to generate questions based on university lecture notes. You will be provided with a context from the lecture 
