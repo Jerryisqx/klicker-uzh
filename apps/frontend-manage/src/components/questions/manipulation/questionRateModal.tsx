@@ -170,7 +170,7 @@ function RatingModal({ isOpen, handleSetIsOpen, questionId, handleRatingComplete
       <div className="flex justify-end gap-4">
       <Button
           className={{
-            root: "py-3 bg-blue-800 text-white font-semibold rounded-lg hover:bg-blue-900 transition",
+            root: "bborder-uzh-grey-80 bg-primary-80 mt-2 font-bold text-white",
           }}
           onClick={handleSubmit}
           disabled={loading}
@@ -184,7 +184,7 @@ function RatingModal({ isOpen, handleSetIsOpen, questionId, handleRatingComplete
       <Button
         onClick={() => handleSetIsOpen(false)}
         className={{
-          root: 'py-2 px-4 rounded bg-gray-200 hover:bg-gray-300',
+          root: 'border-uzh-grey-80 mt-2',
         }}
       >
         <Button.Label>{t('shared.generic.cancel')}</Button.Label>

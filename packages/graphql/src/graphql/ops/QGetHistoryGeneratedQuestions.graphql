@@ -1,5 +1,5 @@
-query GetLatestNQuestions($limit: Int!) {
-  latestNQuestions(limit: $limit) {
+query GetHistoryGeneratedQuestions($limit: Int!, $offset: Int!){
+  historyGeneratedQuestions(limit: $limit, offset: $offset) {
     __typename
 
     ... on ChoicesElement {

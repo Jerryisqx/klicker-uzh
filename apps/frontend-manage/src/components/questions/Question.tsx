@@ -120,7 +120,7 @@ function Question({
 
   const { data: difficultyData, loading: loadingDifficulty, error: errorDifficulty,} = useQuery(GetQuestionDifficultyDocument, {
     variables: { id },
-    
+  
   });
 
   const difficulty = difficultyData?.questionDifficulty;
@@ -260,7 +260,7 @@ function Question({
               <>
                 <Button
                   className={{
-                    root: 'py-3 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition',
+                    root: 'bg-primary-80 h-10 font-bold text-white rounded-lg hover:bg-blue-900 transition',
                   }}
                   onClick={() => setIsRatingModalOpen(true)}
                   aria-label={isRated ? 'Rate Completed' : 'Rate Question'}

@@ -116,6 +116,31 @@ export async function getLatestNQuestions(
 
 }
 
+//add new function for get history generated questions
+export async function getHistoryGeneratedQuestions(
+  { ownerId, limit = 10, offset = 0 }: { ownerId: string; limit?: number; offset?: number },
+  ctx: ContextWithUser
+) {
+  const questions = await ctx.prisma.elementGenerated.findMany({
+    where: {
+      ownerId: ownerId,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    take: limit,
+    skip: offset,
+  });
+
+  return questions.map((question) => {
+    return {
+      ...question,
+      options: processElementOptions(question.type, question.options),
+    };
+  });
+}
+
+
 //manipulate the rate of each generated questions
 export async function rateQuestion(
   { id, helpfulness, difficultyRate, typeRate, relevance}: {
@@ -146,20 +171,39 @@ export async function getQuestionDifficulty(
   { id }: { id: number },
   ctx: ContextWithUser
 ) : Promise<string>{ 
-  const question = await ctx.prisma.elementGenerated.findUnique({
-    where: {
-      id: id,
-    },
-    select: {
-      difficulty: true, 
-    },
-  });
+  let retries = 5; 
+  let delayMs = 200; 
 
-  if (!question) {
-    return "EASY";  
+  while (retries > 0) {
+    const question = await ctx.prisma.elementGenerated.findUnique({
+      where: { id },
+      select: { difficulty: true },
+    });
+
+    if (question) {
+      return question.difficulty;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delayMs)); 
+    retries--; 
   }
 
-  return question.difficulty;
+  return "EASY";
+
+  // const question = await ctx.prisma.elementGenerated.findUnique({
+  //   where: {
+  //     id: id,
+  //   },
+  //   select: {
+  //     difficulty: true, 
+  //   },
+  // });
+
+  // if (!question) {
+  //   return "EASY";  
+  // }
+
+  // return question.difficulty;
 
 }
 
@@ -198,7 +242,7 @@ export async function getSingleGeneratedQuestion(
     questionData: {
       ...question,
       __typename: questionDataType,
-      id: `${question.id}-v${question.version}`,
+      id: `${question.id}`,
       questionId: question.id,
     },
   }

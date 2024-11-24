@@ -5,9 +5,11 @@ query GetSingleGeneratedQuestion($id: Int!) {
     ... on ChoicesElement {
       id
       name
+      status
       type
       content
       explanation
+      pointsMultiplier
 
       options {
         __typename
@@ -26,9 +28,11 @@ query GetSingleGeneratedQuestion($id: Int!) {
     ... on NumericalElement {
       id
       name
+      status
       type
       content
       explanation
+      pointsMultiplier
 
       options {
         hasSampleSolution
@@ -49,9 +53,11 @@ query GetSingleGeneratedQuestion($id: Int!) {
     ... on FreeTextElement {
       id
       name
+      status
       type
       content
       explanation
+      pointsMultiplier
 
       options {
         hasSampleSolution
@@ -65,17 +71,21 @@ query GetSingleGeneratedQuestion($id: Int!) {
     ... on FlashcardElement {
       id
       name
+      status
       type
       content
       explanation
+      pointsMultiplier
     }
 
     ... on ContentElement {
       id
       name
+      status
       type
       content
       explanation
+      pointsMultiplier
     }
   }
 }
