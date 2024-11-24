@@ -5,13 +5,14 @@ import { useTranslations } from 'next-intl'
 import { useState, useEffect,useMemo } from 'react';
 import { pickBy } from 'remeda';
 import { PageSourceProvider } from 'src/pageContext/PageContext';
-import { Button, Select, Label } from '@uzh-bf/design-system';
+import { Button, Select, Label, H2 } from '@uzh-bf/design-system';
 import Layout from '../../components/Layout'
 import QuestionList from '../../components/questions/QuestionList'
 import type { Element } from '@klicker-uzh/graphql/dist/ops'
 import {
     GetLatestNQuestionsDocument,
     ElementType,
+    GetHistoryGeneratedQuestionsDocument,
   } from '@klicker-uzh/graphql/dist/ops';
 
 export default function Home() {
@@ -31,18 +32,45 @@ export default function Home() {
     )
   
     const [selectedType, setSelectedType] = useState<string>();
+    const [selectedModel,setSelectedModel] = useState<string>();
     const [numQuestions, setNumQuestions] = useState<string>('2');
     const [difficultyLevel, setDifficultyLevel] = useState<string>();
     const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
     const [questionsGenerated, setQuestionsGenerated] = useState(false);
     const [questions, setQuestions] = useState<any[]>([]);
+    const [historyQuestions, setHistoryQuestions] = useState<any[]>([]);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [uploadSuccess, setUploadSuccess] = useState<boolean | null>(null)
     const [isGenerating, setIsGenerating] = useState(false);
+    const [activeTab, setActiveTab] = useState<'generating' | 'history'>('generating');
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const itemsPerPage = 10; // number of question displayed per page
+
+
 
     const { loading: loadingQuestions, error: errorQuestions, data: dataQuestions, refetch: refetchQuestions } = useQuery(GetLatestNQuestionsDocument,
         {skip: true,}
     );
+
+    const { loading: loadingHistory, error: errorHistory, data: dataHistory, refetch: refetchHistoryQuestions } = useQuery(GetHistoryGeneratedQuestionsDocument,{
+        variables:{
+            limit: itemsPerPage,
+            offset: (currentPage - 1) * itemsPerPage,
+        },
+
+    });
+
+    const { data: dataMaxId } = useQuery(GetHistoryGeneratedQuestionsDocument, {
+        variables: {
+            limit: 1, 
+            offset: 0, 
+        },
+    });
+    
+    // Calculate total pages
+    const totalItems = dataMaxId?.historyGeneratedQuestions?.[0]?.id || 0;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
 
     // Update the state when dataQuestions is available
     useEffect(() => {
@@ -50,6 +78,13 @@ export default function Home() {
             setQuestions(dataQuestions.latestNQuestions);
         }
     }, [dataQuestions]);
+
+    useEffect(() => {
+        console.log('Complete DataHistory:', dataHistory); 
+        if (dataHistory && dataHistory.historyGeneratedQuestions) {
+            setHistoryQuestions(dataHistory.historyGeneratedQuestions);
+        }
+    }, [dataHistory]);
 
     // Handle the click event for "Generate Question" button
     const handleGenerateQuestions = async () => {
@@ -84,6 +119,7 @@ export default function Home() {
                     setQuestionsGenerated(true);
                     console.log("Questions successfully fetched");
                 }
+                await refetchHistoryQuestions();
             }   
             
         } catch (error) {
@@ -147,6 +183,22 @@ export default function Home() {
         });
     };
 
+    const handleTabSwitch = (tab: 'generating' | 'history') => {
+        setActiveTab(tab); // switch tabs
+        if (tab === 'history') {
+            refetchHistoryQuestions(); 
+        }
+    };
+
+    const handlePageChange = (newPage: number) => {
+        setCurrentPage(newPage); 
+        refetchHistoryQuestions({
+            limit: itemsPerPage,
+            offset: (newPage - 1) * itemsPerPage, 
+        });
+    };
+    
+
     return (
         <PageSourceProvider isGeneratedPage={true}> 
         <Layout
@@ -154,14 +206,7 @@ export default function Home() {
             className={{ children: 'pb-2' }}>
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 w-full flex-grow">
                 <div className="col-span-1">
-                    <div className="mb-6">
-                        <Label
-                            label={t('manage.aiRelate.welcomeMessage')}
-                            className={{
-                                root: 'block mb-2 text-sm font-semibold text-gray-700',
-                            }}
-                        />
-                    </div>
+                    <H2>{t('manage.aiRelate.welcomeMessage')}</H2>
 
                     <div className="mb-6">
                         <Label
@@ -183,7 +228,7 @@ export default function Home() {
                         <Button
                             onClick={handleFileUpload}
                             className={{
-                                root: "w-full py-3 bg-blue-800 text-white font-semibold rounded-lg hover:bg-blue-900 transition",
+                                root: "w-full bg-primary-80 text-white font-bold h-10 rounded-lg hover:bg-blue-900 transition flex items-center justify-center",
                             }}
                         >
                             <Button.Label>{t('manage.aiRelate.uploadFile')}</Button.Label>
@@ -199,6 +244,40 @@ export default function Home() {
                     </div>
 
                     <div className="space-y-4 mb-6">
+                        <div>
+                            <Label
+                                label={t('manage.aiRelate.selectModel')}
+                                className={{
+                                    root: 'block mb-2 text-sm font-semibold text-gray-700',
+                            }}
+                            />
+
+                            <Select
+                                items={[
+                                    {
+                                        label: 'OpenAI',
+                                        value: 'OpenAI',
+                                    },
+                                    {
+                                        label: 'Claude',
+                                        value: 'Claude',
+                                    },
+                                    {
+                                        label: 'Llama',
+                                        value: 'Llama',
+                                    },
+                                ]}
+                                onChange={(newValue) => {
+                                    setSelectedModel(newValue);
+                                }}
+
+                                className={{
+                                    trigger: 'w-full', 
+                                }}
+                                
+                            />
+
+                        </div>
                         <div>
                             <Label
                                 label={t('manage.aiRelate.numQuestion')}
@@ -228,6 +307,11 @@ export default function Home() {
                                     },
                                 ]}
                                 onChange={handleNumQuestionChange}
+
+                                className={{
+                                    trigger: 'w-full', 
+                                }}
+                                
                             />
                         </div>
 
@@ -254,6 +338,10 @@ export default function Home() {
                                     setSelectedLanguage(newValue); // Update the state with the selected value
                                 }}
 
+                                className={{
+                                    trigger: 'w-full', 
+                                }}
+
                             />
 
                         </div>
@@ -267,10 +355,6 @@ export default function Home() {
                             />
 
                             <Select
-                                className={{
-                                    root: "block mb-2 text-sm font-semibold text-gray-700",
-                                }}
-
                                 items={[
                                     {
                                         label: t(`shared.${ElementType.Content}.typeLabel`),
@@ -309,6 +393,10 @@ export default function Home() {
                                 onChange={(newValue) => {
                                     setSelectedType(newValue);
                                 }}
+
+                                className={{
+                                    trigger: 'w-full', 
+                                }}
                             />
 
                         </div>
@@ -344,13 +432,17 @@ export default function Home() {
                                     setDifficultyLevel(newValue);
                                 }}
 
+                                className={{
+                                    trigger: 'w-full', 
+                                }}
+
                             />
                         </div>
 
                         <Button
                             onClick={handleGenerateQuestions}
                             className={{
-                                root: "w-full py-3 bg-blue-800 text-white font-semibold rounded-lg hover:bg-blue-900 transition",
+                                root: "w-full bg-primary-80 text-white font-bold h-10 rounded-lg hover:bg-blue-900 transition flex items-center justify-center",
                             }}
                         >
                             {t('manage.aiRelate.genCap')}
@@ -360,20 +452,43 @@ export default function Home() {
 
                 {/* The right sidebar code start here */}
                 <div className="col-span-3 pl-8 border-l border-gray-300 w-full">
-                    <div className="mb-4">
-                        <Label
-                            label={t('manage.aiRelate.generatedQuestions')}
+                    <H2>{t('manage.aiRelate.generatedQuestions')}</H2>
+
+                    {/* Tabs for switching between generating and history questions */}
+                    <div className="flex border-b border-gray-300 mb-4">
+                        <Button
+                            onClick={() => handleTabSwitch('generating')}
+                            active={activeTab === 'generating'}
                             className={{
-                                root: 'text-xl font-bold',
+                                root: `px-4 py-2 ${activeTab === 'generating' ? 'border-b-2 border-blue-600 font-bold text-blue-600' : 'text-gray-600'}`,
                             }}
-                        />
+                        >
+                            <Button.Label>
+                                {t('manage.aiRelate.generatingTab')}
+                            </Button.Label>
+                        </Button>
+
+                        <Button
+                            onClick={() => handleTabSwitch('history')}
+                            active={activeTab === 'history'}
+                            className={{
+                                root: `px-4 py-2 ${activeTab === 'history' ? 'border-b-2 border-blue-600 font-bold text-blue-600' : 'text-gray-600'}`,
+                            }}
+                        >
+                            <Button.Label>
+                                {t('manage.aiRelate.historyTab')}
+                            </Button.Label>
+                        </Button>
                     </div>
-                    {isGenerating ? (
-                        <Loader />
-                    ) : errorQuestions ? (
-                        <div>Error: {errorQuestions.message}</div>
-                    ) : questionsGenerated && !loadingQuestions ? (
-                        <QuestionList
+
+                    {/* Render questions dynamically based on activeTab */}
+                    {activeTab === 'generating' && (
+                        isGenerating ? (
+                            <Loader />
+                        ) : errorQuestions ? (
+                            <div>{t('shared.generic.error')}: {errorQuestions.message}</div>
+                        ) : questionsGenerated && !loadingQuestions ? (
+                          <QuestionList
                             questions={questions}
                             selectedQuestions={selectedQuestionData}
                             setSelectedQuestions={(id: number, data: Element) => {
@@ -385,20 +500,83 @@ export default function Home() {
                                         newSelectedQuestions[id] = data;
                                     }
                                     return newSelectedQuestions;
-                                
                                 });
                             }}
                             handleTagClick={(tag: string) => {
                                 console.log('Tag clicked:', tag);
                             }}
                             unsetDeletedQuestion={unsetDeletedQuestion}
-                        
+                          />
+                        ) : null
+                    )}
 
-        
-                        />
-                    ) : null}
-                    </div>
+                    {activeTab === 'history' && (
+                        loadingHistory ? (
+                            <Loader/>
+                        ) : errorHistory ? (
+                            <div>{t('shared.generic.error')}: {errorHistory.message}</div>
+                        ) : dataHistory && dataHistory.historyGeneratedQuestions ? (
+                           <>
+                                <QuestionList
+                                    questions={historyQuestions}
+                                    selectedQuestions={selectedQuestionData}
+                                    setSelectedQuestions={(id: number, data: Element) => {
+                                        setSelectedQuestions((prev) => {
+                                            const newSelectedQuestions = { ...prev };
+                                            if (prev[id]) {
+                                                delete newSelectedQuestions[id];
+                                            } else {
+                                                newSelectedQuestions[id] = data;
+                                            }
+                                            return newSelectedQuestions;
+                                        });
+                                    }}
+                                    handleTagClick={(tag: string) => {
+                                        console.log('Tag clicked:', tag);
+                                    }}
+                                    unsetDeletedQuestion={unsetDeletedQuestion}
+                                />
+                                {/* Control Pages */}
+                                <div className="flex justify-between items-center mt-4">
+                                    <Button
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1} 
+                                    >
+                                        <Button.Label>{t('manage.aiRelate.previous')}</Button.Label>
+                                    </Button>
+                                    <Label
+                                        label={t('manage.aiRelate.page', {
+                                            currentPage: currentPage,
+                                            totalPages: totalPages,
+                                        })}
+                                        className={{
+                                            root: 'text-sm font-medium text-gray-700',
+                                        }}
+                                    />
+
+                                    <Button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        <Button.Label>{t('manage.aiRelate.next')}</Button.Label>
+                                    </Button>
+                                </div>
+                            </>
+                    ) : (
+                        <div className="text-center mt-4">
+                            <Label
+                                label={t('manage.aiRelate.noHistory')}
+                                className={{
+                                    root: 'text-xl font-bold text-gray-500',
+                                 }}
+                            />
+                        </div>
+                    )
+                )}
+
+
                 </div>
+            </div>
 
         </Layout>
         </PageSourceProvider>

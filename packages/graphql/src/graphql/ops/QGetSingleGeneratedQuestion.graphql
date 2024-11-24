@@ -4,7 +4,6 @@ query GetSingleGeneratedQuestion($id: Int!) {
 
     ... on ChoicesElement {
       id
-      version
       name
       status
       type
@@ -24,17 +23,10 @@ query GetSingleGeneratedQuestion($id: Int!) {
           value
         }
       }
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on NumericalElement {
       id
-      version
       name
       status
       type
@@ -56,17 +48,10 @@ query GetSingleGeneratedQuestion($id: Int!) {
           max
         }
       }
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on FreeTextElement {
       id
-      version
       name
       status
       type
@@ -81,46 +66,26 @@ query GetSingleGeneratedQuestion($id: Int!) {
         }
         solutions
       }
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on FlashcardElement {
       id
-      version
       name
       status
       type
       content
       explanation
       pointsMultiplier
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on ContentElement {
       id
-      version
       name
       status
       type
       content
       explanation
       pointsMultiplier
-
-      tags {
-        id
-        name
-        order
-      }
     }
   }
 }

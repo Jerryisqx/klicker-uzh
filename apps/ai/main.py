@@ -19,10 +19,10 @@ FILE_EXPIRATION_TIME = timedelta(minutes=60)
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
-
+database_url = os.getenv("DATABASE_URL_1")
 # Initialize Prisma client
 db = Prisma()
-os.environ['DATABASE_URL'] = 'postgresql://klicker:klicker@172.26.56.188:5432/klicker'
+os.environ["DATABASE_URL"] = database_url
 db.connect()
 # CORS 配置：允许来自前端的跨域请求
 app.add_middleware(

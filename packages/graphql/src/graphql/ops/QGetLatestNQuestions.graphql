@@ -10,10 +10,7 @@ query GetLatestNQuestions($limit: Int!) {
       content
 
       pointsMultiplier
-      version
 
-      isArchived
-      isDeleted
       createdAt
       updatedAt
 
@@ -29,12 +26,6 @@ query GetLatestNQuestions($limit: Int!) {
           value
         }
       }
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on NumericalElement {
@@ -45,12 +36,10 @@ query GetLatestNQuestions($limit: Int!) {
       content
 
       pointsMultiplier
-      version
 
-      isArchived
-      isDeleted
       createdAt
       updatedAt
+
 
       options {
         __typename
@@ -70,12 +59,6 @@ query GetLatestNQuestions($limit: Int!) {
           max
         }
       }
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on FreeTextElement {
@@ -86,10 +69,7 @@ query GetLatestNQuestions($limit: Int!) {
       content
 
       pointsMultiplier
-      version
 
-      isArchived
-      isDeleted
       createdAt
       updatedAt
 
@@ -103,12 +83,6 @@ query GetLatestNQuestions($limit: Int!) {
           maxLength
         }
       }
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on FlashcardElement {
@@ -119,18 +93,9 @@ query GetLatestNQuestions($limit: Int!) {
       content
 
       pointsMultiplier
-      version
 
-      isArchived
-      isDeleted
       createdAt
       updatedAt
-
-      tags {
-        id
-        name
-        order
-      }
     }
 
     ... on ContentElement {
@@ -141,18 +106,9 @@ query GetLatestNQuestions($limit: Int!) {
       content
 
       pointsMultiplier
-      version
 
-      isArchived
-      isDeleted
       createdAt
       updatedAt
-
-      tags {
-        id
-        name
-        order
-      }
     }
   }
 }

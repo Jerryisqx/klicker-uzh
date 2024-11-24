@@ -38,7 +38,6 @@ import {
   StackFeedback,
 } from './practiceQuizzes.js'
 import { Element, Tag } from './question.js'
-import { DifficultyLevel } from './questionData.js'
 import {
   Feedback,
   RunningLiveQuizSummary,
@@ -211,6 +210,24 @@ export const Query = builder.queryType({
             }, ctx);
         },
       }),
+
+      historyGeneratedQuestions: asUser.field({
+        nullable: true,
+        type: [Element],
+        args: {
+            limit: t.arg.int({ required: true }), // 每页问题数
+            offset: t.arg.int({ required: true }), // 偏移量
+        },
+        resolve(_: unknown, { limit, offset }: { limit: number; offset: number }, ctx) {
+            return QuestionService.getHistoryGeneratedQuestions({
+                ownerId: ctx.user.sub,
+                limit,
+                offset,
+            }, ctx);
+        },
+    }),
+    
+      
 
       //add new for get question difficulty
       questionDifficulty: asUser.field({

@@ -109,7 +109,7 @@ function Question({
 }: QuestionProps): React.ReactElement {
   const t = useTranslations()
   const [isModificationModalOpen, setIsModificationModalOpen] = useState(false)
-  const [isRated, setIsRated] = useState(false);  // 用来标识是否已评分
+  const [isRated, setIsRated] = useState(false);  // check if it's already rated
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false)
   const [isDuplicationModalOpen, setIsDuplicationModalOpen] = useState(false)
   const [isDeletionModalOpen, setIsDeletionModalOpen] = useState(false)
@@ -120,6 +120,7 @@ function Question({
 
   const { data: difficultyData, loading: loadingDifficulty, error: errorDifficulty,} = useQuery(GetQuestionDifficultyDocument, {
     variables: { id },
+  
   });
 
   const difficulty = difficultyData?.questionDifficulty;
@@ -215,11 +216,13 @@ function Question({
                     date: dayjs(createdAt).format('DD.MM.YYYY HH:mm'),
                   })}
                 </div>
-                <div>
-                  {t('shared.generic.updatedAt', {
-                    date: dayjs(updatedAt).format('DD.MM.YYYY HH:mm'),
-                  })}
-                </div>
+                {!isGeneratedPage && (
+                  <div>
+                    {t('shared.generic.updatedAt', {
+                      date: dayjs(updatedAt).format('DD.MM.YYYY HH:mm'),
+                    })}
+                  </div>
+                )}
               </div>
             </div>
             <div className="mr-6 hidden w-max md:block">
@@ -257,7 +260,7 @@ function Question({
               <>
                 <Button
                   className={{
-                    root: 'py-3 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition',
+                    root: 'bg-primary-80 h-10 font-bold text-white rounded-lg hover:bg-blue-900 transition',
                   }}
                   onClick={() => setIsRatingModalOpen(true)}
                   aria-label={isRated ? 'Rate Completed' : 'Rate Question'}
