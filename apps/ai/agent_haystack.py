@@ -61,26 +61,6 @@ class PreProcess:
         self.retriever = InMemoryEmbeddingRetriever(self.document_store)
         return self.retriever
 
-# def load_openai_api_key():
-#     try:
-#         # 调用 Doppler CLI 获取密钥
-#         result = subprocess.run(
-#             ["doppler", "secrets", "get", "OPENAI_API_KEY", "--plain"],
-#             stdout=subprocess.PIPE,
-#             stderr=subprocess.PIPE,
-#             text=True,
-#         )
-#         if result.returncode == 0:
-#             # 将获取到的密钥加载到环境变量
-#             os.environ["OPENAI_API_KEY"] = result.stdout.strip()
-#         else:
-#             raise RuntimeError(
-#                 f"Failed to retrieve OPENAI_API_KEY: {result.stderr.strip()}"
-#             )
-#     except FileNotFoundError:
-#         raise RuntimeError("Doppler CLI is not installed or not found in PATH.")
-#     except Exception as e:
-#         raise RuntimeError(f"Unexpected error: {e}")
 
 class Agent():
     def __init__(self, retriever):

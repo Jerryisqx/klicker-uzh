@@ -74,17 +74,19 @@ model ElementGenerated {
   content     String // markdown content
   explanation String? // markdown content
 
+  pointsMultiplier Int @default(1) // currently only relevant for FLASHCARD and QUESTION types, keep to ensure ElementEiditModal can work correctly
+
   /// [PrismaElementOptions]
   options Json
 
   difficulty String
   type   ElementType
+  status ElementStatus @default(READY)
 
   helpfulness Int?
   typeRate Int?
   difficultyRate Int?
   relevance Int?
-  score Int?
 
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   ownerId String @db.Uuid

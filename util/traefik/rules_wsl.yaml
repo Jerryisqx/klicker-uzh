@@ -52,39 +52,39 @@ http:
     api:
       loadBalancer:
         servers:
-          - url: 'http://192.168.254.170:3000'
+          - url: 'http://172.26.56.188:3000'
 
     pwa:
       loadBalancer:
         servers:
-          - url: 'http://192.168.254.170:3001'
+          - url: 'http://172.26.56.188:3001'
 
     manage:
       loadBalancer:
         servers:
-          - url: 'http://192.168.254.170:3002'
+          - url: 'http://172.26.56.188:3002'
 
     control:
       loadBalancer:
         servers:
-          - url: 'http://192.168.254.170:3003'
+          - url: 'http://172.26.56.188:3003'
 
     auth:
       loadBalancer:
         servers:
-          - url: 'http://192.168.254.170:3010'
+          - url: 'http://172.26.56.188:3010'
 
     func-responses:
       loadBalancer:
         servers:
-          - url: 'http://192.168.254.170:7072'
+          - url: 'http://172.26.56.188:7072'
 
     func-response-processor:
       loadBalancer:
         servers:
-          - url: 'http://192.168.254.170:7073'
+          - url: 'http://172.26.56.188:7073'
 
     apiai2:
       loadBalancer:
         servers:
-          - url: 'http://192.168.254.170:8000'
+          - url: 'http://172.26.56.188:8000'
