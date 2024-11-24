@@ -60,14 +60,20 @@ async def get_latest_pdf():
         logging.error(f"Error querying the PDF data: {e}")
         raise
 
-def parse_question(context):
+def parse_question(context,num):
+    context = re.sub(r"```json|```", "", context).strip()
+    context= re.sub(r"\*", "", context).strip()
+    context= context.replace("\\", "\\\\")
     parts = re.split(r'\n\s*\n', context)
+    if len(parts)==num+1:
+        parts=parts[1:]
 
     questions = []
     for part in parts:
         current_question = {}
         part = re.split(r'\n\s*', part)
-        current_question['type'] = part[0]
+        # print(part)
+        current_question['type'] = part[0].strip()
         diff=part[1].upper()
         if ":" in diff:
             current_question['difficulty'] = diff.split(":")[1].strip()
@@ -75,7 +81,8 @@ def parse_question(context):
             current_question['difficulty'] = diff.strip()
         # current_question['difficulty'] = diff.split(":")[1].strip()
         current_question['name'] = part[2]
-        current_question['question'] = part[3][10:]
+        current_question['question'] = part[3].split(":")[1].strip()
+
         json_text = ''
         for block in part[4:]:
             try:
@@ -88,6 +95,7 @@ def parse_question(context):
         questions.append(current_question)
 
     return questions
+
 
 def map_question_type(generated_type):
     type_mapping = {
@@ -112,19 +120,35 @@ def map_difficulty_level(difficulty_level):
 async def insert_questions_to_db(questions):
     try:
         for question in questions:
-
-            db.elementgenerated.create(
-                data={
+           # check if 'options' contain 'explanation:'
+            if '"explanation":' in question['options']:
+                db.elementgenerated.create(
+                    data = {
                     "content": question['question'],
                     "options": json.dumps(json.loads(question['options'].split("Back:")[1].strip())),
                     "type": map_question_type(question['type']),
                     "name": question['name'],
-                    "ownerId": str(uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")),  # 转换为字符串
+                    "ownerId": str(uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")),  
                     "createdAt": datetime.now(),
                     "updatedAt": datetime.now(),
-                    "difficulty": map_difficulty_level(question['difficulty']),
-                }
-            )
+                    "difficulty": question['difficulty'],
+                    "explanation": str(question['options'].split('"explanation":')[1].strip()).strip(' "{}')
+                    }
+                )
+            else:
+            # without 'explanation:' ，set None 
+                db.elementgenerated.create(
+                    data = {
+                        "content": question['question'],
+                        "options": json.dumps(json.loads(question['options'].split("Back:")[1].strip())),
+                        "type": map_question_type(question['type']),
+                        "name": question['name'],
+                        "ownerId": str(uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")), 
+                        "createdAt": datetime.now(),
+                        "updatedAt": datetime.now(),
+                        "difficulty": question['difficulty']
+                    }
+                )
         logging.info(f"Successfully inserted {len(questions)} questions into the database.")
     except Exception as e:
         logging.error(f"Error inserting questions into the database: {e}")
@@ -153,22 +177,54 @@ async def generate_questions(request: GenerateQuestionsRequest):
         agent.init()
     except Exception as e:
         logging.error(f"Error initializing OpenAI pipeline: {e}")
+    
+    generated_text = None
 
-    try:
-        logging.info(f"Generating response")
-        response = agent.run_agent(questions_number, language, difficulty, type)
-    except Exception as e:
-        logging.error(f"Error during generation: {e}")
+    # Retry logic
+    MAX_RETRIES = 3
+    retry_count = 0
+    success = False
 
-    generated_text = response['answer_builder']['answers'][0].data
+    while not success and retry_count < MAX_RETRIES:
+        try:
+            if generated_text is None:
+                # If generate error,restart agent
+                logging.info(f"Generating response (attempt {retry_count + 1})...")
+                try:
+                    response = agent.run_agent(questions_number, language, difficulty, type)
+                    generated_text = response['answer_builder']['answers'][0].data
+                    if not generated_text:
+                        raise ValueError("Generated text is empty.")
+                    else:
+                        logging.info(f"Generated text:\n{generated_text}")
+                except Exception as e:
+                    logging.error(f"Error during generation: {e}")
+                    raise  
 
-    if not generated_text:
-        logging.error("Generated text is empty.")
-    else:
-        logging.info(f"Generated text:\n{generated_text}")
+            # format the output
+            questions = parse_question(generated_text, request.limit)
 
-    questions = parse_question(generated_text)
-    await insert_questions_to_db(questions)
+            # insert into the database
+            logging.info("Inserting questions into the database...")
+            await insert_questions_to_db(questions)
+            success = True  
+
+        except Exception as e:
+            logging.error(f"Error inserting questions into the database: {e}")
+            logging.info("Restarting agent and retrying...")
+            retry_count += 1
+
+            # restart agent
+            try:
+                agent = Agent(retriever=retriever)
+                agent.init()
+            except Exception as init_error:
+                logging.error(f"Error reinitializing OpenAI pipeline: {init_error}")
+                break  
+
+    if not success:
+        logging.error("Failed to insert questions into the database after maximum retries.")
+        return {"error": "Failed to insert questions into the database."}
 
     return {"latestNQuestions": questions}
 
