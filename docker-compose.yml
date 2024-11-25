@@ -51,6 +51,11 @@ services:
       - DOPPLER_CONFIG
       - OPENAI_API_KEY
       - DATABASE_URL_1
+      - ANTHROPIC_API_KEY
+      - LLAMA_API_KEY
+      - TOGETHER_API_KEY
+      - LANGFUSE_PUBLIC_KEY
+      - LANGFUSE_SECRET_KEY
     command: >
       sh -c "
       cp /app/prisma1/schema/*.prisma /app/prisma/schema/ &&

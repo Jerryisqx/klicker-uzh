@@ -88,19 +88,6 @@ export default function Home() {
 
     // Handle the click event for "Generate Question" button
     const handleGenerateQuestions = async () => {
-        //Test for local database, not using API:
-        // try {
-        //     const temp = Number(numQuestions);
-
-        //     const { data } = await refetchQuestions({ limit: temp });
-        //     if (data && data.latestNQuestions) {
-        //         setQuestions(data.latestNQuestions);
-        //         setQuestionsGenerated(true);
-        //         console.log("Questions successfully fetched");
-        //     }
-        // } catch (error) {
-        //     console.error('Error fetching questions:', error);
-        // }
         setIsGenerating(true); 
         try {
             const response = await fetch('http://localhost:8000/generate', {
@@ -108,7 +95,7 @@ export default function Home() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ limit: numQuestions, language: selectedLanguage, type: selectedType, difficulty: difficultyLevel }),  // 发送生成问题的数量
+                body: JSON.stringify({ limit: numQuestions, language: selectedLanguage, type: selectedType, difficulty: difficultyLevel,model:selectedModel }),  // 发送生成问题的数量
             });
             
             if (response.ok) {
@@ -261,11 +248,15 @@ export default function Home() {
                                     {
                                         label: 'Claude',
                                         value: 'Claude',
-                                    },
-                                    {
-                                        label: 'Llama',
-                                        value: 'Llama',
-                                    },
+                                    }
+                                    // {
+                                    //     label: 'Llama',
+                                    //     value: 'Llama',
+                                    // },
+                                    // {
+                                    //     label: 'Gemini',
+                                    //     value: 'Gemini',
+                                    // }
                                 ]}
                                 onChange={(newValue) => {
                                     setSelectedModel(newValue);
