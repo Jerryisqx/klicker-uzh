@@ -13,6 +13,7 @@ import {
     GetLatestNQuestionsDocument,
     ElementType,
     GetHistoryGeneratedQuestionsDocument,
+    GetGeneratedQuestionsCountDocument,
   } from '@klicker-uzh/graphql/dist/ops';
 
 export default function Home() {
@@ -60,15 +61,17 @@ export default function Home() {
 
     });
 
-    const { data: dataMaxId } = useQuery(GetHistoryGeneratedQuestionsDocument, {
-        variables: {
-            limit: 1, 
-            offset: 0, 
-        },
-    });
+    const { loading: loadingCount, error: errorCount, data: dataCount, refetch: refetchCount } = useQuery(GetGeneratedQuestionsCountDocument);
+
+    // const { data: dataMaxId } = useQuery(GetHistoryGeneratedQuestionsDocument, {
+    //     variables: {
+    //         limit: 1, 
+    //         offset: 0, 
+    //     },
+    // });
     
     // Calculate total pages
-    const totalItems = dataMaxId?.historyGeneratedQuestions?.[0]?.id || 0;
+    const totalItems = dataCount?.getGeneratedQuestionsCount || 0;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
 

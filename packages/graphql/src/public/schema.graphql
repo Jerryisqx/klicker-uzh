@@ -1347,6 +1347,7 @@ type Query {
   getCourseGroups(courseId: String!): Course
   getCourseOverviewData(courseId: String!): ParticipantLearningData
   getCourseSummary(courseId: String!): CourseSummary
+  getGeneratedQuestionsCount: Int!
   getGradingGroupActivity(id: String!): GroupActivity
   getGroupActivitySummary(id: String!): GroupActivitySummary
   getLiveQuizSummary(quizId: String!): RunningLiveQuizSummary
