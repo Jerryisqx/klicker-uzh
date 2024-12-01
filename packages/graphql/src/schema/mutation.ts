@@ -1554,6 +1554,20 @@ export const Mutation = builder.mutationType({
         },
       }),
 
+      generateQuestion: t.withAuth(asUser).field({
+        nullable: true,
+        type: Element,
+        args: {
+          limit: t.arg.int({ required: true }),
+          language: t.arg.string({ required: true }),
+          difficulty: t.arg.string({ required: true }),
+          type: t.arg.string({ required: true }),
+          model: t.arg.string({ required: true }),
+        },
+        resolve: async (_, args, ctx) => {
+          return QuestionService.GenerateQuestionsAPI(args, ctx)
+        }
+      }),
       // #endregion
     }
   },

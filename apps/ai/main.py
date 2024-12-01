@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, Field, field_validator
+from typing import List, Literal
 import random
 import logging
 import re
@@ -15,7 +15,7 @@ import asyncio
 from datetime import timedelta
 import hashlib
 
-# 设置文件过期时间为1分钟
+# Set the file expiry time to 1 minute
 FILE_EXPIRATION_TIME = timedelta(minutes=60)
 
 logging.basicConfig(level=logging.INFO)
@@ -25,34 +25,37 @@ database_url = os.getenv("DATABASE_URL_1")
 db = Prisma()
 os.environ["DATABASE_URL"] = database_url
 db.connect()
-# CORS 配置：允许来自前端的跨域请求
+# CORS configuration: allowing cross-domain requests from the front-end
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 允许的来源
+    allow_origins=["*"],  # Permitted sources
     allow_credentials=True,
-    allow_methods=["*"],  # 允许所有方法
-    allow_headers=["*"],  # 允许所有头部
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
-# 设置上传文件的基础目录
-UPLOAD_FOLDER = 'tmp'
+# Setting the base directory for uploading files
+UPLOAD_FOLDER = "tmp"
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 uploaded_files = {}
 
-last_uploaded_file = None  # 记录最后一次上传的文件信息
+last_uploaded_file = None  # Record information about the last uploaded file
+
 
 def check_if_new_file(file_path: str) -> bool:
-    global last_uploaded_file,uploaded_files
-    if last_uploaded_file==uploaded_files[file_path]:
+    global last_uploaded_file, uploaded_files
+    if last_uploaded_file == uploaded_files[file_path]:
         return False
     return True
+
 
 # def calculate_file_hash(contents: bytes) -> str:
 #     #calculate the hash to know if the file change
 #     return hashlib.sha256(contents).hexdigest()
 
-# 请求体模型
+
+# Define the request model for generating questions
 class GenerateQuestionsRequest(BaseModel):
     limit: int
     language: str
@@ -60,46 +63,109 @@ class GenerateQuestionsRequest(BaseModel):
     difficulty: str
     model: str
 
+    @field_validator("language")
+    def validate_language(cls, value):
+        allowed_languages = {"English", "German"}
+        if value not in allowed_languages:
+            raise ValueError(
+                f"Invalid Languages: {value}, Language must be one of {allowed_languages}"
+            )
+        return value
+
+    # @field_validator("type")
+    # def validate_type(cls, value):
+    #     allowed_types = {
+    #         "Single Choice",
+    #         "Multiple Choices",
+    #         "Numerical",
+    #         "Free Text",
+    #         "Kprim",
+    #         "Flashcard",
+    #         "Content",
+    #     }
+    #     if value not in allowed_types:
+    #         raise ValueError(
+    #             f"Invalid Types: {value}, Type must be one of {allowed_types}"
+    #         )
+    #     return value
+
+    # @field_validator("difficulty")
+    # def validate_difficulty(cls, value):
+    #     allowed_difficulties = {"EASY", "MEDIUM", "HARD"}
+    #     if value not in allowed_difficulties:
+    #         raise ValueError(
+    #             f"Invalid Difficulty: {value}, Difficulty must be one of {allowed_difficulties}"
+    #         )
+    #     return value
+
+    # @field_validator("model")
+    # def validate_model(cls, value):
+    #     allowed_models = {"OpenAI", "Claude", "Gemini", "Llama"}
+    #     if value not in allowed_models:
+    #         raise ValueError(
+    #             f"Invalid Model: {value}, Model must be one of {allowed_models}"
+    #         )
+    #     return value
+
+
+# Function to validate file type
+def validate_file_type(file: UploadFile):
+    allowed_extensions = {
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    }
+    if file.content_type not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type: {file.content_type}. Allowed types are: PDF, DOCX, PPTX.",
+        )
+
+
 # Function to get the latest PDF file from the database that is not deleted
 async def get_latest_pdf():
     try:
         result = await db.pdf_files.find_first(
-            where={"is_deleted": False},
-            order={"uploaded_at": "desc"}
+            where={"is_deleted": False}, order={"uploaded_at": "desc"}
         )
         if result:
-            return {"pdf_id": result.id, "file_name": result.file_name, "file_path": result.file_path}
+            return {
+                "pdf_id": result.id,
+                "file_name": result.file_name,
+                "file_path": result.file_path,
+            }
         return None
     except Exception as e:
         logging.error(f"Error querying the PDF data: {e}")
         raise
 
-def parse_question(context,num):
+
+def parse_question(context, num):
     context = re.sub(r"```json|```", "", context).strip()
-    context= re.sub(r"\*", "", context).strip()
-    context= context.replace("\\", "\\\\")
-    parts = re.split(r'\n\s*\n', context)
-    if len(parts)==num+1:
-        parts=parts[1:]
+    context = re.sub(r"\*", "", context).strip()
+    context = context.replace("\\", "\\\\")
+    parts = re.split(r"\n\s*\n", context)
+    if len(parts) == num + 1:
+        parts = parts[1:]
 
     questions = []
     for part in parts:
         current_question = {}
-        part = re.split(r'\n\s*', part)
+        part = re.split(r"\n\s*", part)
         # print(part)
-        current_question['type'] = part[0].strip()
-        diff=part[1].upper()
+        current_question["type"] = part[0].strip()
+        diff = part[1].upper()
         if ":" in diff:
-            current_question['difficulty'] = diff.split(":")[1].strip()
+            current_question["difficulty"] = diff.split(":")[1].strip()
         else:
-            current_question['difficulty'] = diff.strip()
+            current_question["difficulty"] = diff.strip()
         # current_question['difficulty'] = diff.split(":")[1].strip()
-        current_question['name'] = part[2]
+        current_question["name"] = part[2]
         if "Question:" or "Content:" in part[3]:
-            current_question['question'] = part[3].split(":", 1)[1].strip()
+            current_question["question"] = part[3].split(":", 1)[1].strip()
         else:
-            current_question['question'] = part[3].strip()
-        json_text = ''
+            current_question["question"] = part[3].strip()
+        json_text = ""
         for block in part[4:]:
             try:
                 json_text += block
@@ -107,7 +173,7 @@ def parse_question(context,num):
                 break
             except Exception:
                 continue
-        current_question['options'] = json_text
+        current_question["options"] = json_text
         questions.append(current_question)
 
     return questions
@@ -115,86 +181,101 @@ def parse_question(context,num):
 
 def map_question_type(generated_type):
     type_mapping = {
-        'Single Choice': 'SC',
-        'Multiple Choices': 'MC',
-        'Numerical': 'NUMERICAL',
-        'Free Text': 'FREE_TEXT',
-        'Kprim': 'KPRIM',
-        'Flashcard': 'FLASHCARD'
+        "Single Choice": "SC",
+        "Multiple Choices": "MC",
+        "Numerical": "NUMERICAL",
+        "Free Text": "FREE_TEXT",
+        "Kprim": "KPRIM",
+        "Flashcard": "FLASHCARD",
     }
-    return type_mapping.get(generated_type, 'CONTENT')  # Default to CONTENT if type not found
+    return type_mapping.get(
+        generated_type, "CONTENT"
+    )  # Default to CONTENT if type not found
+
 
 def map_difficulty_level(difficulty_level):
-    difficulty_map = {
-        "EASY": "EASY",
-        "MEDIUM": "MEDIUM",
-        "HARD": "HARD"
-    }
-    return difficulty_map.get(difficulty_level, 'EASY')
+    difficulty_map = {"EASY": "EASY", "MEDIUM": "MEDIUM", "HARD": "HARD"}
+    return difficulty_map.get(difficulty_level, "EASY")
 
 
 async def insert_questions_to_db(questions):
     try:
         for question in questions:
-           # check if 'options' contain 'explanation:'
-            if '"explanation":' in question['options']:
+            # check if 'options' contain 'explanation:'
+            if '"explanation":' in question["options"]:
                 db.elementgenerated.create(
-                    data = {
-                    "content": question['question'],
-                    "options": json.dumps(json.loads(question['options'].split("Back:")[1].strip())),
-                    "type": map_question_type(question['type']),
-                    "name": question['name'],
-                    "ownerId": str(uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")),  
-                    "createdAt": datetime.now(),
-                    "updatedAt": datetime.now(),
-                    "difficulty": question['difficulty'],
-                    "explanation": str(question['options'].split('"explanation":')[1].strip()).strip(' "{}')
+                    data={
+                        "content": question["question"],
+                        "options": json.dumps(
+                            json.loads(question["options"].split("Back:")[1].strip())
+                        ),
+                        "type": map_question_type(question["type"]),
+                        "name": question["name"],
+                        "ownerId": str(
+                            uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")
+                        ),
+                        "createdAt": datetime.now(),
+                        "updatedAt": datetime.now(),
+                        "difficulty": question["difficulty"],
+                        "explanation": str(
+                            question["options"].split('"explanation":')[1].strip()
+                        ).strip(' "{}'),
                     }
                 )
             else:
-            # without 'explanation:' ，set None 
+                # without 'explanation:' ，set None
                 db.elementgenerated.create(
-                    data = {
-                        "content": question['question'],
-                        "options": json.dumps(json.loads(question['options'].split("Back:")[1].strip())),
-                        "type": map_question_type(question['type']),
-                        "name": question['name'],
-                        "ownerId": str(uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")), 
+                    data={
+                        "content": question["question"],
+                        "options": json.dumps(
+                            json.loads(question["options"].split("Back:")[1].strip())
+                        ),
+                        "type": map_question_type(question["type"]),
+                        "name": question["name"],
+                        "ownerId": str(
+                            uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")
+                        ),
                         "createdAt": datetime.now(),
                         "updatedAt": datetime.now(),
-                        "difficulty": question['difficulty']
+                        "difficulty": question["difficulty"],
                     }
                 )
-        logging.info(f"Successfully inserted {len(questions)} questions into the database.")
+        logging.info(
+            f"Successfully inserted {len(questions)} questions into the database."
+        )
     except Exception as e:
         logging.error(f"Error inserting questions into the database: {e}")
         raise
 
+
 agent_cache = None
 
-@app.post('/generate')
+
+@app.post("/generate")
 async def generate_questions(request: GenerateQuestionsRequest):
-    global filename,agent_cache
-    
+    global filename, agent_cache
+
     questions_number = request.limit
     language = request.language
     type = request.type
     difficulty = request.difficulty
-    model=request.model
+    model = request.model
+    logging.info(
+        f"User Config checked: {questions_number}, {language}, {type}, {difficulty}, {model}"
+    )
 
     logging.info("Starting the question generation process...")
 
     pdf_file_path = os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
-    prompt_path=os.path.join(os.getcwd(), "template.txt")
-    with open(prompt_path, 'r', encoding='utf-8') as file:
-        template=file.read()
-    is_new_file=check_if_new_file(pdf_file_path)
+    prompt_path = os.path.join(os.getcwd(), "template.txt")
+    with open(prompt_path, "r", encoding="utf-8") as file:
+        template = file.read()
+    is_new_file = check_if_new_file(pdf_file_path)
     logging.info(f"Is there any new file {is_new_file}")
     if agent_cache is None:
         logging.info("Agent_cache IS NONE")
     else:
         logging.info("Agent_cache IS NOT NONE")
-
 
     if is_new_file or agent_cache is None:
         logging.info("Initializing OpenAI generator and retriever...")
@@ -202,14 +283,14 @@ async def generate_questions(request: GenerateQuestionsRequest):
             preprocess = PreProcess()
             preprocess.init()
             retriever = preprocess.run_preprocess(pdf_file_path)
-            agent = Agent(retriever=retriever,model=model,template=template)
+            agent = Agent(retriever=retriever, model=model, template=template)
             agent.init()
             agent_cache = agent
         except Exception as e:
             logging.error(f"Error initializing OpenAI pipeline: {e}")
     else:
-        agent=agent_cache
-        logging.info("No new file detected. Using existing Agent...")    
+        agent = agent_cache
+        logging.info("No new file detected. Using existing Agent...")
     generated_text = None
 
     # Retry logic
@@ -223,15 +304,17 @@ async def generate_questions(request: GenerateQuestionsRequest):
                 # If generate error,restart agent
                 logging.info(f"Generating response (attempt {retry_count + 1})...")
                 try:
-                    response = agent.run_agent(questions_number, language, difficulty, type)
-                    generated_text = response['answer_builder']['answers'][0].data
+                    response = agent.run_agent(
+                        questions_number, language, difficulty, type
+                    )
+                    generated_text = response["answer_builder"]["answers"][0].data
                     if not generated_text:
                         raise ValueError("Generated text is empty.")
                     else:
                         logging.info(f"Generated text:\n{generated_text}")
                 except Exception as e:
                     logging.error(f"Error during generation: {e}")
-                    raise  
+                    raise
 
                     # format the output
             questions = parse_question(generated_text, request.limit)
@@ -239,67 +322,70 @@ async def generate_questions(request: GenerateQuestionsRequest):
             # insert into the database
             logging.info("Inserting questions into the database...")
             await insert_questions_to_db(questions)
-            success = True  
+            success = True
 
         except Exception as e:
             logging.error(f"Error inserting questions into the database: {e}")
             logging.info("Restarting agent and retrying...")
             retry_count += 1
-         # restart agent
+            # restart agent
             try:
                 if is_new_file:
                     preprocess = PreProcess()
                     preprocess.init()
                     retriever = preprocess.run_preprocess(pdf_file_path)
-                    agent = Agent(retriever=retriever,model=model,template=template)
+                    agent = Agent(retriever=retriever, model=model, template=template)
                     agent.init()
                     agent_cache = agent
                 else:
                     continue
             except Exception as init_error:
                 logging.error(f"Error reinitializing OpenAI pipeline: {init_error}")
-                break  
+                break
 
     if not success:
-        logging.error("Failed to insert questions into the database after maximum retries.")
+        logging.error(
+            "Failed to insert questions into the database after maximum retries."
+        )
         return {"error": "Failed to insert questions into the database."}
 
-    return {"latestNQuestions": questions}
-
+    # return {"latestNQuestions": questions}
+    return questions
 
 
 # Receive PDF file and save it into /tmp folder
-@app.post('/upload')
+@app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
-    global filename,uploaded_files,last_uploaded_file
+    global filename, uploaded_files, last_uploaded_file
     contents = await file.read()
-    with open(f'{UPLOAD_FOLDER}/{file.filename}', 'wb') as f:
+    with open(f"{UPLOAD_FOLDER}/{file.filename}", "wb") as f:
         f.write(contents)
     filename = file.filename
-    file_path=os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
+    file_path = os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
     uploaded_files[file_path] = datetime.now()
-    last_uploaded_file= uploaded_files[file_path]
+    last_uploaded_file = uploaded_files[file_path]
     return {"message": "Upload successful"}
 
 
-
-
-# 定义删除过期文件的任务
+# Define tasks to delete expired files
 async def delete_expired_files():
     while True:
         now = datetime.now()
         for file_path, upload_time in list(uploaded_files.items()):
-            # 如果文件过期，则删除文件
+            # Delete the file if it is out of date
             if now - upload_time > FILE_EXPIRATION_TIME:
                 try:
                     os.remove(file_path)
-                    del uploaded_files[file_path]  # 从记录中删除文件
+                    del uploaded_files[
+                        file_path
+                    ]  # Deletion of documents from the record
                     logging.info(f"Deleted expired file: {file_path}")
                 except Exception as e:
                     logging.info(f"Failed to delete file {file_path}: {str(e)}")
-        await asyncio.sleep(60)  # 每60秒检查一次
+        await asyncio.sleep(60)  # Check every 60 seconds
 
-# 启动定时任务
+
+# Starting a timed task
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(delete_expired_files())

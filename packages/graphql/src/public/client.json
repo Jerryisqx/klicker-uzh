@@ -48,6 +48,7 @@
    "FinalizeGroupActivityGrading": "34cb7c3d8663525726d4c01a99024d8d9dc67dcf7b0960d1991e7826e3709978",
    "FlagElement": "403bd21237532d0617afcf0fb671333b3a8b02182fb7502710ee723f7df38784",
    "GenerateLoginToken": "3fe64391a80b2bd9911ffa5c3caee86be580f074631776e5f48056224b2931a2",
+   "GenerateQuestionsAPI": "a1542cb74eb7ccb4d9c651ba40ab5c61d684026b886a00ed51aeeb27daec9b4a",
    "GetFileUploadSas": "85e1fc997cba702c1c7cdc6e62c9ef7a2f4d3c42b451c1858dca80994a0eb160",
    "GradeGroupActivitySubmission": "1598504a24599180ce4cc4116c91ffbf480ecc5c63d6f7245e8f127e799f76dd",
    "JoinCourse": "b2dcf0a1bfd981293d428d643e7eb930df6bb6373b4532c788c2ac995a1f3130",

@@ -17,6 +17,28 @@ import { prop, sortBy, swapIndices } from 'remeda'
 import type { ContextWithUser } from '../lib/context.js'
 import { prepareInitialQuestionInstanceResults } from '../lib/questions.js'
 
+export async function GenerateQuestionsAPI(
+  {limit, language, difficulty, type, model}: {limit: number, language: string, difficulty: string, type: string, model: string}, 
+  ctx: ContextWithUser) {
+  //call python api
+  try {
+    const response = await fetch('http://localhost:8000/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({limit, language, difficulty, type, model})
+    });
+    if (!response.ok) {
+      throw new Error(`Error: ${response.statusText}`);
+    }
+    return response
+  }
+  catch (error) {
+    console.error('Error Generating Questions', error);
+  }
+}
+
 function processElementOptions(elementType: DB.ElementType, options: any) {
   switch (elementType) {
     case DB.ElementType.SC:

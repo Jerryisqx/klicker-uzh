@@ -1,0 +1,126 @@
+mutation GenerateQuestionsAPI (
+    $limit: Int!
+    $language: String!
+    $difficulty: String!
+    $type: String!
+    $model: String!
+) {
+    generateQuestion (
+        limit: $limit
+        language: $language
+        difficulty: $difficulty
+        type: $type
+        model: $model
+    ) {
+        __typename
+
+        ... on ChoicesElement {
+            id
+            name
+            status
+            type
+            content
+
+            pointsMultiplier
+
+            createdAt
+            updatedAt
+
+            options {
+                __typename
+                hasSampleSolution
+                hasAnswerFeedbacks
+                displayMode
+                choices {
+                ix
+                correct
+                feedback
+                value
+                }
+            }
+        }
+
+        ... on NumericalElement {
+            id
+            name
+            status
+            type
+            content
+
+            pointsMultiplier
+
+            createdAt
+            updatedAt
+
+
+            options {
+                __typename
+                hasSampleSolution
+                hasAnswerFeedbacks
+                placeholder
+                accuracy
+                unit
+                solutionRanges {
+                __typename
+                min
+                max
+                }
+                restrictions {
+                __typename
+                min
+                max
+                }
+            }
+        }
+
+        ... on FreeTextElement {
+            id
+            name
+            status
+            type
+            content
+
+            pointsMultiplier
+
+            createdAt
+            updatedAt
+
+            options {
+                __typename
+                hasSampleSolution
+                hasAnswerFeedbacks
+                solutions
+                restrictions {
+                __typename
+                maxLength
+                }
+            }
+        }
+
+        ... on FlashcardElement {
+            id
+            name
+            status
+            type
+            content
+
+            pointsMultiplier
+
+            createdAt
+            updatedAt
+        }
+
+        ... on ContentElement {
+            id
+            name
+            status
+            type
+            content
+
+            pointsMultiplier
+
+            createdAt
+            updatedAt
+        }
+    }
+}

@@ -1,4 +1,4 @@
-import { useQuery } from '@apollo/client'
+import { useQuery, useMutation } from '@apollo/client'
 import Loader from '@klicker-uzh/shared-components/src/Loader'
 import { GetStaticPropsContext } from 'next'
 import { useTranslations } from 'next-intl'
@@ -10,6 +10,7 @@ import Layout from '../../components/Layout'
 import QuestionList from '../../components/questions/QuestionList'
 import type { Element } from '@klicker-uzh/graphql/dist/ops'
 import {
+    GenerateQuestionsApiDocument,
     GetLatestNQuestionsDocument,
     ElementType,
     GetHistoryGeneratedQuestionsDocument,
@@ -46,7 +47,7 @@ export default function Home() {
     const [currentPage, setCurrentPage] = useState<number>(1);
     const itemsPerPage = 10; // number of question displayed per page
 
-
+    const [generatedQuestion] = useMutation(GenerateQuestionsApiDocument);
 
     const { loading: loadingQuestions, error: errorQuestions, data: dataQuestions, refetch: refetchQuestions } = useQuery(GetLatestNQuestionsDocument,
         {skip: true,}
@@ -97,7 +98,17 @@ export default function Home() {
                 },
                 body: JSON.stringify({ limit: numQuestions, language: selectedLanguage, type: selectedType, difficulty: difficultyLevel,model:selectedModel }),  // 发送生成问题的数量
             });
-            
+        // try {
+        //     const response = await generatedQuestion({
+        //             variables: {
+        //                 limit: Number(numQuestions),
+        //                 language: selectedLanguage || 'English',
+        //                 type: selectedType || 'Content',
+        //                 difficulty: difficultyLevel || 'EASY',
+        //                 model: selectedModel || 'OpenAI',
+        //             },
+        //     });
+            console.log('Response:', response);
             if (response.ok) {
                 console.log("Questions successfully generated and stored");
                 const { data } = await refetchQuestions({ limit: Number(numQuestions)});
