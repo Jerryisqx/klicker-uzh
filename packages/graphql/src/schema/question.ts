@@ -297,29 +297,6 @@ const sharedElementProps = (t: any) => ({
   }),
 })
 
-// export interface Question = objectType({
-//   name: 'Question',
-//   definition(t) {
-//     t.string('id');
-//     t.string('name');
-//     t.string('content');
-//     t.string('type');
-//     t.list.string('tags');
-//   },
-// });
-
-// export const GenerateQuestionsResponse = builder.objectType('GenerateQuestionsResponse', {
-//   fields: (t) => ({
-//     success: t.boolean({ required: true }), // 是否成功
-//     message: t.string({ required: true }), // 操作消息
-//     limit: t.int({ required: true }), // 问题数量
-//     language: t.string({ required: true }), // 语言
-//     difficulty: t.string({ required: true }), // 难度
-//     type: t.string({ required: true }), // 问题类型
-//     model: t.string({ required: true }), // 模型
-//   }),
-// });
-
 interface IBaseElementProps extends Omit<DB.Element, 'ownerId' | 'originalId'> {
   tags?: ITag[] | null
 }
