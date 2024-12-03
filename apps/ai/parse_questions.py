@@ -3,6 +3,7 @@ import json
 from pydantic import BaseModel, ValidationError
 from typing import List
 
+
 # 定义验证模型
 class Choice(BaseModel):
     ix: int  # Option index
@@ -10,10 +11,12 @@ class Choice(BaseModel):
     correct: bool  # True if correct, False otherwise
     feedback: Optional[str]  # Feedback for the option (optional)
 
+
 # Numerical-specific solution range
 class SolutionRange(BaseModel):
     max: float  # Upper bound of the range
     min: Optional[float]  # Lower bound of the range (optional)
+
 
 # Back structures for different question types
 class BackSingleChoice(BaseModel):
@@ -22,11 +25,13 @@ class BackSingleChoice(BaseModel):
     hasSampleSolution: bool = True
     hasAnswerFeedbacks: bool = True
 
+
 class BackMultipleChoices(BaseModel):
     choices: List[Choice]
     displayMode: str = "LIST"
     hasSampleSolution: bool = True
     hasAnswerFeedbacks: bool = True
+
 
 class BackNumerical(BaseModel):
     unit: str  # Unit of measurement (e.g., %, €, etc.)
@@ -36,20 +41,25 @@ class BackNumerical(BaseModel):
     hasSampleSolution: bool = True
     hasAnswerFeedbacks: bool = False
 
+
 class BackKprim(BaseModel):
     choices: List[Choice]
     displayMode: str = "LIST"
     hasSampleSolution: bool = True
     hasAnswerFeedbacks: bool = True
 
+
 class BackFreeText(BaseModel):
     answers: Optional[List[str]] = None  # No answers needed
+
 
 class BackFlashcard(BaseModel):
     answers: List[str]  # List of correct answers
 
+
 class BackContent(BaseModel):
     answers: Optional[List[str]] = None  # No answers needed
+
 
 # Main question classes
 class SingleChoice(BaseModel):
@@ -59,12 +69,14 @@ class SingleChoice(BaseModel):
     question: str
     back: BackSingleChoice
 
+
 class MultipleChoices(BaseModel):
     type: str = "Multiple Choices"
     difficulty: str
     questionField: str
     question: str
     back: BackMultipleChoices
+
 
 class Numerical(BaseModel):
     type: str = "Numerical"
@@ -73,12 +85,14 @@ class Numerical(BaseModel):
     question: str
     back: BackNumerical
 
+
 class Kprim(BaseModel):
     type: str = "Kprim"
     difficulty: str
     questionField: str
     question: str
     back: BackKprim
+
 
 class FreeText(BaseModel):
     type: str = "Free Text"
@@ -87,12 +101,14 @@ class FreeText(BaseModel):
     question: str
     back: BackFreeText
 
+
 class Flashcard(BaseModel):
     type: str = "Flashcard"
     difficulty: str
     questionField: str
     question: str
     back: BackFlashcard
+
 
 class Content(BaseModel):
     type: str = "Content"
@@ -105,29 +121,29 @@ class Content(BaseModel):
 # 定义解析函数
 def parse_question(context, num):
     # 解析输入为多部分
-    parts = re.split(r'\n\s*\n', context)
+    parts = re.split(r"\n\s*\n", context)
     if len(parts) == num + 1:
         parts = parts[1:]  # 去掉第一部分（上下文描述）
 
     questions = []
     for part in parts:
         current_question = {}
-        part = re.split(r'\n\s*', part)  # 按换行分割
+        part = re.split(r"\n\s*", part)  # 按换行分割
         print(part)
 
         # 提取基本字段
-        current_question['type'] = part[0].strip()
+        current_question["type"] = part[0].strip()
         diff = part[1].upper()
         if ":" in diff:
-            current_question['difficulty'] = diff.split(":")[1].strip()
+            current_question["difficulty"] = diff.split(":")[1].strip()
         else:
-            current_question['difficulty'] = diff.strip()
+            current_question["difficulty"] = diff.strip()
 
-        current_question['name'] = part[2]
-        current_question['question'] = part[3][10:]
+        current_question["name"] = part[2]
+        current_question["question"] = part[3][10:]
 
         # 提取 JSON 数据
-        json_text = ''
+        json_text = ""
         for block in part[4:]:
             try:
                 json_text += block  # 累积 JSON 数据
@@ -136,10 +152,11 @@ def parse_question(context, num):
             except Exception:
                 continue
 
-        current_question['options'] = json_text.strip()
+        current_question["options"] = json_text.strip()
         questions.append(current_question)
 
     return questions
+
 
 # 解析后的数据进一步处理和验证
 def process_questions(generated_text, num):
@@ -152,7 +169,9 @@ def process_questions(generated_text, num):
     for question in questions:
         # 尝试解析 JSON
         try:
-            options = json.loads(question['options'].split("Back:")[1].strip())  # 提取 Back 对象
+            options = json.loads(
+                question["options"].split("Back:")[1].strip()
+            )  # 提取 Back 对象
         except Exception as e:
             print(f"Error parsing JSON: {e}")
             continue
@@ -161,11 +180,11 @@ def process_questions(generated_text, num):
         try:
             validated_back = Back(**options)
             validated_question = Question(
-                type=question['type'],
-                difficulty=question['difficulty'],
-                name=question['name'],
-                question=question['question'],
-                back=validated_back
+                type=question["type"],
+                difficulty=question["difficulty"],
+                name=question["name"],
+                question=question["question"],
+                back=validated_back,
             )
 
             # 如果验证成功，生成最终的 `data`
@@ -174,7 +193,7 @@ def process_questions(generated_text, num):
                 "options": validated_question.back.dict(),  # 转换为字典格式
                 "type": validated_question.type,
                 "name": validated_question.name,
-                "difficulty": validated_question.difficulty
+                "difficulty": validated_question.difficulty,
             }
 
             validated_data.append(data)
@@ -184,6 +203,7 @@ def process_questions(generated_text, num):
             continue
 
     return validated_data
+
 
 # 测试数据
 generated_text = """

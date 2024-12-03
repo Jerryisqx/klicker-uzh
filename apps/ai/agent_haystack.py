@@ -54,7 +54,9 @@ class PreProcess:
         self.document_joiner = DocumentJoiner()
         self.document_cleaner = DocumentCleaner()
         self.document_splitter = DocumentSplitter(split_by="page")
-        self.doc_embedder = SentenceTransformersDocumentEmbedder(model="sentence-transformers/all-MiniLM-L6-v2")
+        self.doc_embedder = SentenceTransformersDocumentEmbedder(
+            model="sentence-transformers/all-MiniLM-L6-v2"
+        )
         # self.doc_embedder = OpenAIDocumentEmbedder(model="text-embedding-3-large")
         self.doc_writer = DocumentWriter(self.document_store)
         self.retriever = None
@@ -139,7 +141,9 @@ class Agent:
         # else:
         #     self.api_key = os.getenv("TOGETHER_API_KEY")
         #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
-        self.text_embedder = SentenceTransformersTextEmbedder(model="sentence-transformers/all-MiniLM-L6-v2")
+        self.text_embedder = SentenceTransformersTextEmbedder(
+            model="sentence-transformers/all-MiniLM-L6-v2"
+        )
         self.generated_content = ""
         self.templete = template
         self.prompt_builder = PromptBuilder(template=self.templete)
