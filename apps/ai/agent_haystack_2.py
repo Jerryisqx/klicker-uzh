@@ -3,6 +3,7 @@
 
 import logging
 import os
+
 # API and KEY set
 import subprocess
 import re
@@ -29,14 +30,20 @@ from haystack.components.routers import FileTypeRouter
 from haystack.components.preprocessors import DocumentSplitter, DocumentCleaner
 from haystack.components.writers import DocumentWriter
 from haystack.components.joiners import DocumentJoiner
-from haystack.components.embedders import SentenceTransformersDocumentEmbedder, SentenceTransformersTextEmbedder
-from haystack.components.generators import OpenAIGenerator,HuggingFaceAPIGenerator
+from haystack.components.embedders import (
+    SentenceTransformersDocumentEmbedder,
+    SentenceTransformersTextEmbedder,
+)
+from haystack.components.generators import OpenAIGenerator, HuggingFaceAPIGenerator
 from haystack.components.retrievers.in_memory import InMemoryEmbeddingRetriever
 from haystack.components.builders import PromptBuilder, AnswerBuilder
 from haystack_integrations.components.connectors.langfuse import LangfuseConnector
 from haystack_integrations.components.generators.anthropic import AnthropicGenerator
-from haystack_integrations.components.generators.google_ai import GoogleAIGeminiGenerator
+from haystack_integrations.components.generators.google_ai import (
+    GoogleAIGeminiGenerator,
+)
 from haystack.components.retrievers.in_memory import InMemoryBM25Retriever
+
 
 class PreProcess:
     def __init__(self):
@@ -47,56 +54,80 @@ class PreProcess:
         self.document_joiner = DocumentJoiner()
         self.document_cleaner = DocumentCleaner()
         self.document_splitter = DocumentSplitter(split_by="page")
-        self.doc_embedder = SentenceTransformersDocumentEmbedder(model="sentence-transformers/all-MiniLM-L6-v2")
+        self.doc_embedder = SentenceTransformersDocumentEmbedder(
+            model="sentence-transformers/all-MiniLM-L6-v2"
+        )
         self.doc_writer = DocumentWriter(self.document_store)
         self.retriever = None
 
     def init(self):
-        self.preprocess_pipeline.add_component(instance=self.file_type_router, name="file_type_router")
-        self.preprocess_pipeline.add_component(instance=self.pdf_converter, name="pypdf_converter")
-        self.preprocess_pipeline.add_component(instance=self.document_joiner, name="document_joiner")
-        self.preprocess_pipeline.add_component(instance=self.document_cleaner, name="document_cleaner")
-        self.preprocess_pipeline.add_component(instance=self.document_splitter, name="document_splitter")
-        self.preprocess_pipeline.add_component(instance=self.doc_embedder, name="document_embedder")
-        self.preprocess_pipeline.add_component(instance=self.doc_writer, name="document_writer")
-        self.preprocess_pipeline.connect("file_type_router.application/pdf", "pypdf_converter.sources")
+        self.preprocess_pipeline.add_component(
+            instance=self.file_type_router, name="file_type_router"
+        )
+        self.preprocess_pipeline.add_component(
+            instance=self.pdf_converter, name="pypdf_converter"
+        )
+        self.preprocess_pipeline.add_component(
+            instance=self.document_joiner, name="document_joiner"
+        )
+        self.preprocess_pipeline.add_component(
+            instance=self.document_cleaner, name="document_cleaner"
+        )
+        self.preprocess_pipeline.add_component(
+            instance=self.document_splitter, name="document_splitter"
+        )
+        self.preprocess_pipeline.add_component(
+            instance=self.doc_embedder, name="document_embedder"
+        )
+        self.preprocess_pipeline.add_component(
+            instance=self.doc_writer, name="document_writer"
+        )
+        self.preprocess_pipeline.connect(
+            "file_type_router.application/pdf", "pypdf_converter.sources"
+        )
         self.preprocess_pipeline.connect("pypdf_converter", "document_joiner")
         self.preprocess_pipeline.connect("document_joiner", "document_cleaner")
         self.preprocess_pipeline.connect("document_cleaner", "document_splitter")
         self.preprocess_pipeline.connect("document_splitter", "document_embedder")
         self.preprocess_pipeline.connect("document_embedder", "document_writer")
-    
+
     def run_preprocess(self, doc_path):
         doc_path = Path(doc_path)
-        self.preprocess_pipeline.run({"file_type_router": {"sources": [doc_path]}},
-                            include_outputs_from=["document_splitter"])
+        self.preprocess_pipeline.run(
+            {"file_type_router": {"sources": [doc_path]}},
+            include_outputs_from=["document_splitter"],
+        )
         self.retriever = InMemoryEmbeddingRetriever(self.document_store)
         return self.retriever
 
-def extract_questions(context,num,generated_content):
+
+def extract_questions(context, num, generated_content):
     context = re.sub(r"```json|```", "", context).strip()
-    context= re.sub(r"\*", "", context).strip()
-    context=context.replace("\\", "\\\\")
-#     print(context)
-    parts = re.split(r'\n\s*\n', context)
+    context = re.sub(r"\*", "", context).strip()
+    context = context.replace("\\", "\\\\")
+    #     print(context)
+    parts = re.split(r"\n\s*\n", context)
     print(len(parts))
-    if len(parts)==num+1:
-        parts=parts[1:]
+    if len(parts) == num + 1:
+        parts = parts[1:]
 
     for part in parts:
         base_part = part.split("Back:")[0].strip()
         base_part = json.loads(base_part)
-        generated_content+= f"\n{base_part.get("content") or base_part.get("question")}"
+        generated_content += (
+            f"\n{base_part.get("content") or base_part.get("question")}"
+        )
     return generated_content
 
-class Agent_stage1():
-    def __init__(self, retriever,model,template):
+
+class Agent_stage1:
+    def __init__(self, retriever, model, template):
         # Openai API Key
         self.retriever = retriever
         self.api_key = os.environ["OPENAI_API_KEY"]
         self.rag_pipeline = Pipeline()
         self.tracer = LangfuseConnector("Basic RAG Pipeline")
-        if model=="OpenAI":
+        if model == "OpenAI":
             # load_openai_api_key()
             self.api_key = os.getenv("OPENAI_API_KEY")
             self.generator = OpenAIGenerator(model="gpt-4o-2024-11-20")
@@ -109,8 +140,10 @@ class Agent_stage1():
         # else:
         #     self.api_key = os.getenv("TOGETHER_API_KEY")
         #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
-        self.text_embedder = SentenceTransformersTextEmbedder(model="sentence-transformers/all-MiniLM-L6-v2")
-        self.template=template
+        self.text_embedder = SentenceTransformersTextEmbedder(
+            model="sentence-transformers/all-MiniLM-L6-v2"
+        )
+        self.template = template
         self.prompt_builder = PromptBuilder(template=self.template)
         self.answer_builder = AnswerBuilder()
 
@@ -124,7 +157,9 @@ class Agent_stage1():
         self.rag_pipeline.add_component("answer_builder", self.answer_builder)
 
         # Now, connect the components to each other
-        self.rag_pipeline.connect("text_embedder.embedding", "retriever.query_embedding")
+        self.rag_pipeline.connect(
+            "text_embedder.embedding", "retriever.query_embedding"
+        )
         self.rag_pipeline.connect("retriever", "prompt_builder.documents")
         self.rag_pipeline.connect("prompt_builder", "llm")
         self.rag_pipeline.connect("llm.replies", "answer_builder.replies")
@@ -133,25 +168,35 @@ class Agent_stage1():
 
     def run_agent(self):
         question = f"Please generate key points and all related original context according to the input document."
-#         generation_kwargs = {"max_tokens": 4096}
-        response = self.rag_pipeline.run({
-            "text_embedder": {"text": question}, 
-            "prompt_builder": {"question": question},
-#             "llm": {"generation_kwargs": generation_kwargs},
-            "answer_builder": {"query": question}})
+        #         generation_kwargs = {"max_tokens": 4096}
+        response = self.rag_pipeline.run(
+            {
+                "text_embedder": {"text": question},
+                "prompt_builder": {"question": question},
+                #             "llm": {"generation_kwargs": generation_kwargs},
+                "answer_builder": {"query": question},
+            }
+        )
         return response
-    
-class Agent_stage2():
-    def __init__(self,retriever,model,template):
+
+
+class Agent_stage2:
+    def __init__(self, retriever, model, template):
         # Openai API Key
         self.document_store = InMemoryDocumentStore()
-        self.documents = [Document(content=retriever, meta={"source": "Generated Content"}, id="generated_1")]
+        self.documents = [
+            Document(
+                content=retriever,
+                meta={"source": "Generated Content"},
+                id="generated_1",
+            )
+        ]
         self.document_store.write_documents(documents=self.documents)
         self.retriever = InMemoryBM25Retriever(document_store=self.document_store)
         self.api_key = os.environ["OPENAI_API_KEY"]
         self.rag_pipeline = Pipeline()
         self.tracer = LangfuseConnector("Basic RAG Pipeline")
-        if model=="OpenAI":
+        if model == "OpenAI":
             # load_openai_api_key()
             self.api_key = os.getenv("OPENAI_API_KEY")
             self.generator = OpenAIGenerator(model="gpt-4o-2024-11-20")
@@ -164,13 +209,13 @@ class Agent_stage2():
         # else:
         #     self.api_key = os.getenv("TOGETHER_API_KEY")
         #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
-        self.generated_content=""
-        self.template=template
+        self.generated_content = ""
+        self.template = template
         self.prompt_builder = PromptBuilder(template=self.template)
         self.answer_builder = AnswerBuilder()
 
     def init(self):
-         # Add components to your pipeline
+        # Add components to your pipeline
         self.rag_pipeline.add_component("tracer", self.tracer)
         self.rag_pipeline.add_component("retriever", self.retriever)
         self.rag_pipeline.add_component("prompt_builder", self.prompt_builder)
@@ -186,12 +231,22 @@ class Agent_stage2():
 
     def run_agent(self, question_number, language, difficulty_level, question_type):
         question = f"Please generate {question_number} {question_type} questions, the difficulty of the questions is {difficulty_level}, and the question language is {language}."
-#         generation_kwargs = {"max_tokens": 4096}
-        response = self.rag_pipeline.run({
-            "retriever": {"query": question}, 
-            "prompt_builder": {"question": question,"generated_content":self.generated_content},
-#             "llm": {"generation_kwargs": generation_kwargs},
-            "answer_builder": {"query": question}})
-        self.generated_content=extract_questions(response['answer_builder']['answers'][0].data,question_number,self.generated_content)
-#         print(self.generated_content)
+        #         generation_kwargs = {"max_tokens": 4096}
+        response = self.rag_pipeline.run(
+            {
+                "retriever": {"query": question},
+                "prompt_builder": {
+                    "question": question,
+                    "generated_content": self.generated_content,
+                },
+                #             "llm": {"generation_kwargs": generation_kwargs},
+                "answer_builder": {"query": question},
+            }
+        )
+        self.generated_content = extract_questions(
+            response["answer_builder"]["answers"][0].data,
+            question_number,
+            self.generated_content,
+        )
+        #         print(self.generated_content)
         return response

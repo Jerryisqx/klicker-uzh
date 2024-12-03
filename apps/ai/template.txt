@@ -43,8 +43,7 @@
                          -- Use meaningful examples for testing and clarity.  
                     6. Free Text Questions:  
                        - Open-ended questions that require a written response.  
-                       - Do not provide answers for these types of questions.  
-               
+                       - Do not provide answers for these types of questions.                 
             
             **Stage 2: Generate Contents**:
             First,Using the instructions generated in Stage 1, create the actual questions for each topic following the topic weights' order. For each question, ensure that:
@@ -78,8 +77,6 @@ Avoid asking for generic model comparisons; instead, focus on the factors that w
                 4.Make sure every quesion,answer and also content follow the standard format we request.
                 5.Do not choose same questions in different query.
                 
-            
-                
             ---
             
             ### **Formatting Rules:**
@@ -95,9 +92,7 @@ Avoid asking for generic model comparisons; instead, focus on the factors that w
             
             2. **Consistency**:  
                - Every question must strictly adhere to its predefined format. Do not mix formats (e.g., avoid formatting numerical questions like free-text questions).  
-               - Do not include additional Markdown syntax, blank lines, greetings, or commentary in the output.  
-            
-            
+               - Do not include additional Markdown syntax, blank lines, greetings, or commentary in the output.                          
             
             ---
             

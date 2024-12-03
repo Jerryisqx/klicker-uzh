@@ -77,7 +77,7 @@ export const Mutation = builder.mutationType({
     }
     const asUserFullAccess = { ...asUser, scope: DB.UserLoginScope.FULL_ACCESS }
     const asUserOwner = { ...asUser, scope: DB.UserLoginScope.ACCOUNT_OWNER }
-
+    
     return {
       // ----- ANONYMOUS OPERATIONS -----
       // #region
@@ -1553,7 +1553,44 @@ export const Mutation = builder.mutationType({
           return AccountService.deleteUserLogin(args, ctx)
         },
       }),
-
+      
+      // generateQuestion: t.withAuth(asUser).field({
+      //   nullable: true,
+      //   type: Element,
+      //   args: {
+      //     limit: t.arg.int({ required: true }),
+      //     language: t.arg.string({ required: true }),
+      //     difficulty: t.arg.string({ required: true }),
+      //     type: t.arg.string({ required: true }),
+      //     model: t.arg.string({ required: true }),
+      //   },
+      //   resolve: async (_, args, ctx) => {
+      //     // return QuestionService.GenerateQuestionsAPI(args, ctx)
+      //     const response = await QuestionService.GenerateQuestionsAPI(args, ctx);
+      //     if (response.ok == true) {
+      //       return null
+      //     }
+      //   }
+      // }),
+      generateQuestion: t.withAuth(asUser).boolean({
+        nullable: true,
+        args: {
+          limit: t.arg.int({ required: true }),
+          language: t.arg.string({ required: true }),
+          difficulty: t.arg.string({ required: true }),
+          type: t.arg.string({ required: true }),
+          model: t.arg.string({ required: true }),
+        },
+        resolve: async (_, args, ctx) => {
+          const response = await QuestionService.GenerateQuestionsAPI(args, ctx)
+          if (response?.ok == true) {
+            return true
+          }
+          else {
+            return false
+          }
+        }
+      })
       // #endregion
     }
   },

@@ -1,0 +1,15 @@
+mutation GenerateQuestionsAPI (
+    $limit: Int!
+    $language: String!
+    $difficulty: String!
+    $type: String!
+    $model: String!
+) {
+    generateQuestion (
+        limit: $limit
+        language: $language
+        difficulty: $difficulty
+        type: $type
+        model: $model
+    ) 
+}
