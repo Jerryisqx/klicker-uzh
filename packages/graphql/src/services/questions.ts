@@ -19,7 +19,7 @@ import { prepareInitialQuestionInstanceResults } from '../lib/questions.js'
 
 export async function GenerateQuestionsAPI(
   {limit, language, difficulty, type, model}: {limit: number, language: string, difficulty: string, type: string, model: string}, 
-  ctx: ContextWithUser) {
+  ctx) {
   //call python api
   try {
     const response = await fetch('http://localhost:8000/generate', {

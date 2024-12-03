@@ -998,7 +998,7 @@ type Mutation {
   finalizeGroupActivityGrading(id: String!): GroupActivity
   flagElement(content: String!, elementId: Int!, elementInstanceId: Int!): ElementFeedback
   generateLoginToken: User
-  generateQuestion(difficulty: String!, language: String!, limit: Int!, model: String!, type: String!): Element
+  generateQuestion(difficulty: String!, language: String!, limit: Int!, model: String!, type: String!): Boolean
   getFileUploadSas(contentType: String!, fileName: String!): FileUploadSAS
   gradeGroupActivitySubmission(gradingDecisions: GroupActivityGradingInput!, id: Int!): GroupActivityInstance
   joinCourse(courseId: String!): ParticipantLearningData

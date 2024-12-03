@@ -90,26 +90,26 @@ export default function Home() {
     // Handle the click event for "Generate Question" button
     const handleGenerateQuestions = async () => {
         setIsGenerating(true); 
-        try {
-            const response = await fetch('http://localhost:8000/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ limit: numQuestions, language: selectedLanguage, type: selectedType, difficulty: difficultyLevel,model:selectedModel }),  // 发送生成问题的数量
-            });
         // try {
-        //     const response = await generatedQuestion({
-        //             variables: {
-        //                 limit: Number(numQuestions),
-        //                 language: selectedLanguage || 'English',
-        //                 type: selectedType || 'Content',
-        //                 difficulty: difficultyLevel || 'EASY',
-        //                 model: selectedModel || 'OpenAI',
-        //             },
+        //     const response = await fetch('http://localhost:8000/generate', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //         },
+        //         body: JSON.stringify({ limit: numQuestions, language: selectedLanguage, type: selectedType, difficulty: difficultyLevel,model:selectedModel }),  // 发送生成问题的数量
         //     });
+        try {
+            const response = await generatedQuestion({
+                    variables: {
+                        limit: Number(numQuestions),
+                        language: selectedLanguage || 'English',
+                        type: selectedType || 'Content',
+                        difficulty: difficultyLevel || 'EASY',
+                        model: selectedModel || 'OpenAI',
+                    },
+            });
             console.log('Response:', response);
-            if (response.ok) {
+            if (response) {
                 console.log("Questions successfully generated and stored");
                 const { data } = await refetchQuestions({ limit: Number(numQuestions)});
                 if (data && data.latestNQuestions) {

@@ -13836,8 +13836,8 @@
               }
             ],
             "type": {
-              "kind": "UNION",
-              "name": "Element",
+              "kind": "SCALAR",
+              "name": "Boolean",
               "ofType": null
             },
             "isDeprecated": false,
