@@ -6,6 +6,7 @@ import os
 # API and KEY set
 import subprocess
 import re
+import json
 
 # OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
@@ -35,6 +36,7 @@ from haystack.components.builders import PromptBuilder, AnswerBuilder
 from haystack_integrations.components.connectors.langfuse import LangfuseConnector
 from haystack_integrations.components.generators.anthropic import AnthropicGenerator
 from haystack_integrations.components.generators.google_ai import GoogleAIGeminiGenerator
+from haystack.components.retrievers.in_memory import InMemoryBM25Retriever
 
 class PreProcess:
     def __init__(self):
@@ -82,15 +84,16 @@ def extract_questions(context,num,generated_content):
         parts=parts[1:]
 
     for part in parts:
-        base_part = part.split("Base:")[1].split("Back:")[0].strip()
+        base_part = part.split("Back:")[0].strip()
+        base_part = json.loads(base_part)
         generated_content+= f"\n{base_part.get("content") or base_part.get("question")}"
     return generated_content
 
-class Agent():
+class Agent_stage1():
     def __init__(self, retriever,model,template):
         # Openai API Key
-        self.model=model
         self.retriever = retriever
+        self.api_key = os.environ["OPENAI_API_KEY"]
         self.rag_pipeline = Pipeline()
         self.tracer = LangfuseConnector("Basic RAG Pipeline")
         if model=="OpenAI":
@@ -107,11 +110,10 @@ class Agent():
         #     self.api_key = os.getenv("TOGETHER_API_KEY")
         #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
         self.text_embedder = SentenceTransformersTextEmbedder(model="sentence-transformers/all-MiniLM-L6-v2")
-        self.generated_content=""
-        self.templete = template
-        self.prompt_builder = PromptBuilder(template=self.templete)
+        self.template=template
+        self.prompt_builder = PromptBuilder(template=self.template)
         self.answer_builder = AnswerBuilder()
-        
+
     def init(self):
         # Add components to your pipeline
         self.rag_pipeline.add_component("tracer", self.tracer)
@@ -128,16 +130,68 @@ class Agent():
         self.rag_pipeline.connect("llm.replies", "answer_builder.replies")
         self.rag_pipeline.connect("llm.meta", "answer_builder.meta")
         self.rag_pipeline.connect("retriever", "answer_builder.documents")
-    
-    def run_agent(self, question_number, language, difficulty_level, question_type):
-        question =f"Please generate {question_number} {question_type} questions, the difficulty of the questions is {difficulty_level}, and the question language is {language}."
-        generation_kwargs = {"max_tokens": 4096}
+
+    def run_agent(self):
+        question = f"Please generate key points and all related original context according to the input document."
+#         generation_kwargs = {"max_tokens": 4096}
         response = self.rag_pipeline.run({
             "text_embedder": {"text": question}, 
-            "prompt_builder": {"question": question,"generated_content":self.generated_content}, 
-            "llm": {"generation_kwargs": generation_kwargs},
+            "prompt_builder": {"question": question},
+#             "llm": {"generation_kwargs": generation_kwargs},
             "answer_builder": {"query": question}})
-        self.generated_content=extract_questions(response['answer_builder']['answers'][0].data,question_number,self.generated_content)
         return response
     
-    
+class Agent_stage2():
+    def __init__(self,retriever,model,template):
+        # Openai API Key
+        self.document_store = InMemoryDocumentStore()
+        self.documents = [Document(content=retriever, meta={"source": "Generated Content"}, id="generated_1")]
+        self.document_store.write_documents(documents=self.documents)
+        self.retriever = InMemoryBM25Retriever(document_store=self.document_store)
+        self.api_key = os.environ["OPENAI_API_KEY"]
+        self.rag_pipeline = Pipeline()
+        self.tracer = LangfuseConnector("Basic RAG Pipeline")
+        if model=="OpenAI":
+            # load_openai_api_key()
+            self.api_key = os.getenv("OPENAI_API_KEY")
+            self.generator = OpenAIGenerator(model="gpt-4o-2024-11-20")
+        else:
+            self.api_key = os.getenv("ANTHROPIC_API_KEY")
+            self.generator = AnthropicGenerator(model="claude-3-haiku-20240307")
+        # elif model=='Llama':
+        #     self.api_key = os.getenv("LLAMA_API_KEY")
+        #     self.generator = HuggingFaceAPIGenerator(api_type="text_generation_inference", api_params={"model_name": "meta-llama/Meta-Llama-3-8B"})
+        # else:
+        #     self.api_key = os.getenv("TOGETHER_API_KEY")
+        #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
+        self.generated_content=""
+        self.template=template
+        self.prompt_builder = PromptBuilder(template=self.template)
+        self.answer_builder = AnswerBuilder()
+
+    def init(self):
+         # Add components to your pipeline
+        self.rag_pipeline.add_component("tracer", self.tracer)
+        self.rag_pipeline.add_component("retriever", self.retriever)
+        self.rag_pipeline.add_component("prompt_builder", self.prompt_builder)
+        self.rag_pipeline.add_component("llm", self.generator)
+        self.rag_pipeline.add_component("answer_builder", self.answer_builder)
+
+        # Now, connect the components to each other
+        self.rag_pipeline.connect("retriever", "prompt_builder.documents")
+        self.rag_pipeline.connect("prompt_builder", "llm")
+        self.rag_pipeline.connect("llm.replies", "answer_builder.replies")
+        self.rag_pipeline.connect("llm.meta", "answer_builder.meta")
+        self.rag_pipeline.connect("retriever", "answer_builder.documents")
+
+    def run_agent(self, question_number, language, difficulty_level, question_type):
+        question = f"Please generate {question_number} {question_type} questions, the difficulty of the questions is {difficulty_level}, and the question language is {language}."
+#         generation_kwargs = {"max_tokens": 4096}
+        response = self.rag_pipeline.run({
+            "retriever": {"query": question}, 
+            "prompt_builder": {"question": question,"generated_content":self.generated_content},
+#             "llm": {"generation_kwargs": generation_kwargs},
+            "answer_builder": {"query": question}})
+        self.generated_content=extract_questions(response['answer_builder']['answers'][0].data,question_number,self.generated_content)
+#         print(self.generated_content)
+        return response

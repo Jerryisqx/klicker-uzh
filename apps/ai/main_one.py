@@ -9,15 +9,16 @@ import os
 import json
 import uuid
 from datetime import datetime
-from agent_haystack_2 import PreProcess, Agent_stage1,Agent_stage2
+from agent_haystack import PreProcess, Agent
 from prisma import Prisma
 import asyncio
 from datetime import timedelta
 import hashlib
-from parse_questions import parse_question
+from parse_questions import test_format,parse_question
 
 # 设置文件过期时间为1分钟
 FILE_EXPIRATION_TIME = timedelta(minutes=60)
+
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 database_url = os.getenv("DATABASE_URL_1")
@@ -98,17 +99,33 @@ def map_difficulty_level(difficulty_level):
 async def insert_questions_to_db(questions):
     try:
         for question in questions:
-            db.elementgenerated.create(
-                data = {
+           # check if 'options' contain 'explanation:'
+            if '"explanation":' in question['options']:
+                db.elementgenerated.create(
+                    data = {
                     "content": question['question'],
-                    "options": json.dumps(question['options']),
+                    "options": json.dumps(json.loads(question['options'].split("Back:")[1].strip())),
                     "type": map_question_type(question['type']),
                     "name": question['name'],
                     "ownerId": str(uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")),  
                     "createdAt": datetime.now(),
                     "updatedAt": datetime.now(),
                     "difficulty": question['difficulty'],
-                    "explanation": question['options'].get('explanation', '').split("'explanation':")[-1] if 'explanation' in question['options'] else ''
+                    "explanation": str(question['options'].split('"explanation":')[1].strip()).strip(' "{}')
+                    }
+                )
+            else:
+            # without 'explanation:' ，set None 
+                db.elementgenerated.create(
+                    data = {
+                        "content": question['question'],
+                        "options": json.dumps(json.loads(question['options'].split("Back:")[1].strip())),
+                        "type": map_question_type(question['type']),
+                        "name": question['name'],
+                        "ownerId": str(uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")), 
+                        "createdAt": datetime.now(),
+                        "updatedAt": datetime.now(),
+                        "difficulty": question['difficulty']
                     }
                 )
         logging.info(f"Successfully inserted {len(questions)} questions into the database.")
@@ -120,7 +137,7 @@ agent_cache = None
 
 @app.post('/generate')
 async def generate_questions(request: GenerateQuestionsRequest):
-    global filename,agent_cache,generated_text1
+    global filename,agent_cache
     
     questions_number = request.limit
     language = request.language
@@ -131,12 +148,9 @@ async def generate_questions(request: GenerateQuestionsRequest):
     logging.info("Starting the question generation process...")
 
     pdf_file_path = os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
-    prompt_path1=os.path.join(os.getcwd(), "stage1.txt")
-    prompt_path2=os.path.join(os.getcwd(), "stage2.txt")
-    with open(prompt_path1, 'r', encoding='utf-8') as file:
-        stage1=file.read()
-    with open(prompt_path2, 'r', encoding='utf-8') as file:
-        stage2=file.read()
+    prompt_path=os.path.join(os.getcwd(), "template.txt")
+    with open(prompt_path, 'r', encoding='utf-8') as file:
+        template=file.read()
     is_new_file=check_if_new_file(pdf_file_path)
     logging.info(f"Is there any new file {is_new_file}")
     if agent_cache is None:
@@ -144,40 +158,22 @@ async def generate_questions(request: GenerateQuestionsRequest):
     else:
         logging.info("Agent_cache IS NOT NONE")
 
-    MAX_RETRIES = 3
-    retry_count = 0
-    generated_text1=None
+
     if is_new_file or agent_cache is None:
         logging.info("Initializing OpenAI generator and retriever...")
-        while generated_text1 is None and retry_count < MAX_RETRIES:
-            try:
-                preprocess = PreProcess()
-                preprocess.init()
-                retriever = preprocess.run_preprocess(pdf_file_path)
-                agent1 = Agent_stage1(retriever=retriever,model=model,template=stage1)
-                agent1.init()
-                logging.info(f"Running Agent_stage1 (attempt {retry_count + 1})...")
-                response1 = agent1.run_agent()
-                generated_text1=response1['answer_builder']['answers'][0].data
-                if not generated_text1:  # 检查生成结果是否为空
-                    raise ValueError("Generated text1 is empty.")
-                else:
-                    logging.info(f"Generated text:\n{generated_text1}")
-            except Exception as e:
-                retry_count += 1
-                logging.error(f"Error in generating text1: {e}")
-                if retry_count < MAX_RETRIES:
-                    logging.info("Retrying Agent_stage1...")
-                else:
-                    logging.error("Maximum retries reached for Agent_stage1.")
-                    raise  # 如果达到最大重试次数，抛出异常
-        agent2 = Agent_stage2(retriever=generated_text1,model=model,template=stage2)
-        agent2.init()
-        agent_cache=agent2
+        try:
+            preprocess = PreProcess()
+            preprocess.init()
+            retriever = preprocess.run_preprocess(pdf_file_path)
+            agent = Agent(retriever=retriever,model=model,template=template)
+            agent.init()
+            agent_cache = agent
+        except Exception as e:
+            logging.error(f"Error initializing OpenAI pipeline: {e}")
     else:
-        agent2 = agent_cache
+        agent=agent_cache
         logging.info("No new file detected. Using existing Agent...")    
-    generated_text2 = None
+    generated_text = None
 
     # Retry logic
     MAX_RETRIES = 3
@@ -186,23 +182,22 @@ async def generate_questions(request: GenerateQuestionsRequest):
 
     while not success and retry_count < MAX_RETRIES:
         try:
-            if generated_text2 is None:
+            if generated_text is None:
                 # If generate error,restart agent
                 logging.info(f"Generating response (attempt {retry_count + 1})...")
                 try:
-                    response2 = agent2.run_agent(questions_number, language, difficulty, type)
-                    generated_text2 = response2['answer_builder']['answers'][0].data
-                    logging.info(f"Generated text:\n{generated_text2}")
-                    if not generated_text2:
+                    response = agent.run_agent(questions_number, language, difficulty, type)
+                    generated_text = response['answer_builder']['answers'][0].data
+                    if not generated_text:
                         raise ValueError("Generated text is empty.")
                     else:
-                        logging.info(f"Generated text:\n{generated_text2}")
+                        logging.info(f"Generated text:\n{generated_text}")
                 except Exception as e:
                     logging.error(f"Error during generation: {e}")
                     raise  
 
                     # format the output
-            result = parse_question(generated_text2, questions_number)
+            result = parse_question(generated_text, questions_number)
             if  isinstance(result, str) and result.startswith("Error"):
                 logging.error(f"Error during generation: {result}")
                 raise
@@ -219,9 +214,12 @@ async def generate_questions(request: GenerateQuestionsRequest):
          # restart agent
             try:
                 if is_new_file:
-                    agent2 = Agent_stage2(retriever=generated_text1,template=stage2)
-                    agent2.init()
-                    agent_cache = agent2
+                    preprocess = PreProcess()
+                    preprocess.init()
+                    retriever = preprocess.run_preprocess(pdf_file_path)
+                    agent = Agent(retriever=retriever,model=model,template=template)
+                    agent.init()
+                    agent_cache = agent
                 else:
                     continue
             except Exception as init_error:
@@ -232,7 +230,7 @@ async def generate_questions(request: GenerateQuestionsRequest):
         logging.error("Failed to insert questions into the database after maximum retries.")
         return {"error": "Failed to insert questions into the database."}
 
-    return {"latestNQuestions": generated_text2}
+    return {"latestNQuestions": generated_text}
 
 
 
