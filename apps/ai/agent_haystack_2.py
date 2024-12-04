@@ -8,7 +8,9 @@ import os
 import subprocess
 import re
 import json
-
+from litellm import completion
+from litellm import LiteLLM
+from haystack import component
 # OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 # LLAMA_API_KEY= os.getenv("LLAMA_API_KEY")
@@ -178,6 +180,111 @@ class Agent_stage1:
             }
         )
         return response
+
+# class LiteLLMComponent(BaseComponent):
+#     def __init__(self, api_key, model_name):
+#         super().__init__()
+#         self.llm_client = LiteLLM(api_key=api_key)
+#         self.model_name = model_name
+
+#     def run(self, query, **kwargs):
+#         """执行 LiteLLM 的文本生成"""
+#         response = self.llm_client.completion(
+#             model=self.model_name,
+#             messages=[{"role": "user", "content": query}],
+#         )
+#         return {"replies": response}, "output_1"
+
+#     def run_batch(self, queries, **kwargs):
+#         """批量生成（如果需要的话）"""
+#         responses = [
+#             self.llm_client.completion(
+#                 model=self.model_name,
+#                 messages=[{"role": "user", "content": query}],
+#             )
+#             for query in queries
+#         ]
+#         return {"replies": responses}, "output_1"
+
+# class Agent_stage1:
+#     def __init__(self, retriever, model, template):
+#         # 初始化 retriever 和模板
+#         self.retriever = retriever
+#         self.template = template
+#         self.model = model
+
+#         # 获取 API 密钥和模型名称
+#         self.api_key = self._get_api_key(model)
+#         self.llm_model = self._map_model_name(model)
+
+#         # 初始化 LiteLLM 组件
+#         self.llm_component = LiteLLMComponent(api_key=self.api_key, model_name=self.llm_model)
+
+#         # 初始化文本嵌入模型
+#         self.text_embedder = SentenceTransformersTextEmbedder("sentence-transformers/all-MiniLM-L6-v2")
+
+#         # 初始化其他组件
+#         self.prompt_builder = PromptBuilder(template=self.template)
+#         self.answer_builder = AnswerBuilder()
+#         self.rag_pipeline = Pipeline()
+#         self.tracer = LangfuseConnector("Basic RAG Pipeline")
+
+#     def _get_api_key(self, model):
+#         model_api_keys = {
+#             "OpenAI": os.getenv("OPENAI_API_KEY"),
+#             "Claude": os.getenv("ANTHROPIC_API_KEY"),
+#             "Llama": os.getenv("LLAMA_API_KEY"),
+#             "GoogleGemini": os.getenv("TOGETHER_API_KEY"),
+#         }
+#         return model_api_keys.get(model, "")
+
+#     def _map_model_name(self, model):
+#         model_mapping = {
+#             "OpenAI": "gpt-4o-2024-11-20",
+#             "Claude": "claude-3-haiku-20240307",
+#             "Llama": "llama-2-7b",
+#             "GoogleGemini": "gemini-1",
+#         }
+#         return model_mapping.get(model)
+
+#     def init(self):
+#         # 添加组件到管道
+#         self.rag_pipeline.add_component("tracer", self.tracer)
+#         self.rag_pipeline.add_component("text_embedder", self.text_embedder)
+#         self.rag_pipeline.add_component("retriever", self.retriever)
+#         self.rag_pipeline.add_component("prompt_builder", self.prompt_builder)
+
+#         # 使用封装的 LiteLLM 组件
+#         self.rag_pipeline.add_component("llm", self.llm_component)
+
+#         self.rag_pipeline.add_component("answer_builder", self.answer_builder)
+
+#         # 连接组件
+#         self.rag_pipeline.connect("text_embedder.embedding", "retriever.query_embedding")
+#         self.rag_pipeline.connect("retriever", "prompt_builder.documents")
+#         self.rag_pipeline.connect("prompt_builder", "llm")
+#         self.rag_pipeline.connect("llm.replies", "answer_builder.replies")
+#         self.rag_pipeline.connect("retriever", "answer_builder.documents")
+
+#     def embed_text(self, text):
+#         """使用文本嵌入模型生成向量"""
+#         return self.text_embedder.encode(text)
+
+#     def run_agent(self):
+#         """运行管道"""
+#         question = "Please generate key points and all related original context according to the input document."
+
+#         # 执行 RAG 管道任务
+#         response = self.rag_pipeline.run(
+#             {
+#                 "text_embedder": {"text": question},
+#                 "prompt_builder": {"question": question},
+#                 "llm": {"query": question},
+#                 "answer_builder": {"query": question},
+#             }
+#         )
+#         return response
+
 
 
 class Agent_stage2:

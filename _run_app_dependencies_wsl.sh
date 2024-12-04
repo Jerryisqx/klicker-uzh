@@ -4,4 +4,4 @@
 ./util/sync-schema.sh
 
 # start postgres, redis, and reverse proxy
-doppler run -- docker compose up postgres redis_exec redis_cache reverse_proxy_wsl
+doppler run -- docker compose up postgres redis_exec redis_cache reverse_proxy_wsl apiai

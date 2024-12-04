@@ -55,7 +55,6 @@ class Kprim(BaseModel):
     hasAnswerFeedbacks: bool = True
 
 
-
 class FreeText(BaseModel):
     gt_type: Literal["Free Text"]
     answers: Optional[List[str]] = None  # No answers needed

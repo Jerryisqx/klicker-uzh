@@ -33,9 +33,9 @@ services:
     networks:
       - klicker
 
-  apiai2:
-    image: qingyuleo/aiapi:v2.0.0
-    container_name: apiai2
+  apiai:
+    image: qingyuleo/aiapi:v3.0.0
+    container_name: apiai
     ports:
       - "8000:8000"
     networks:
@@ -51,6 +51,7 @@ services:
       - DOPPLER_CONFIG
       - OPENAI_API_KEY
       - DATABASE_URL_1
+      - DATABASE_URL    
       - ANTHROPIC_API_KEY
       - LLAMA_API_KEY
       - TOGETHER_API_KEY
