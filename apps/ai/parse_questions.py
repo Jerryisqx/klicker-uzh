@@ -1,7 +1,8 @@
-import re
 import json
-from pydantic import BaseModel, ValidationError
-from typing import List
+from pydantic import BaseModel, ValidationError, Field, field_validator
+from typing import Literal
+from typing import Optional, List
+import re
 
 
 # 定义验证模型
@@ -19,216 +20,113 @@ class SolutionRange(BaseModel):
 
 
 # Back structures for different question types
-class BackSingleChoice(BaseModel):
+class SingleChoice(BaseModel):
+    gt_type: Literal["Single Choice"]
     choices: List[Choice]
     displayMode: str = "LIST"
     hasSampleSolution: bool = True
     hasAnswerFeedbacks: bool = True
 
 
-class BackMultipleChoices(BaseModel):
+class MultipleChoices(BaseModel):
+    gt_type: Literal["Multiple Choices"]
     choices: List[Choice]
     displayMode: str = "LIST"
     hasSampleSolution: bool = True
     hasAnswerFeedbacks: bool = True
 
 
-class BackNumerical(BaseModel):
+class Numerical(BaseModel):
+    gt_type: Literal["Numerical"]
     unit: str  # Unit of measurement (e.g., %, €, etc.)
     accuracy: int  # Decimal places required
     restrictions: Optional[dict]  # Max and Min value restrictions
     solutionRanges: List[SolutionRange]
     hasSampleSolution: bool = True
     hasAnswerFeedbacks: bool = False
+    explanation: str
 
 
-class BackKprim(BaseModel):
+class Kprim(BaseModel):
+    gt_type: Literal["Kprim"]
     choices: List[Choice]
     displayMode: str = "LIST"
     hasSampleSolution: bool = True
     hasAnswerFeedbacks: bool = True
 
 
-class BackFreeText(BaseModel):
-    answers: Optional[List[str]] = None  # No answers needed
-
-
-class BackFlashcard(BaseModel):
-    answers: List[str]  # List of correct answers
-
-
-class BackContent(BaseModel):
-    answers: Optional[List[str]] = None  # No answers needed
-
-
-# Main question classes
-class SingleChoice(BaseModel):
-    type: str = "Single Choice"
-    difficulty: str
-    questionField: str
-    question: str
-    back: BackSingleChoice
-
-
-class MultipleChoices(BaseModel):
-    type: str = "Multiple Choices"
-    difficulty: str
-    questionField: str
-    question: str
-    back: BackMultipleChoices
-
-
-class Numerical(BaseModel):
-    type: str = "Numerical"
-    difficulty: str
-    questionField: str
-    question: str
-    back: BackNumerical
-
-
-class Kprim(BaseModel):
-    type: str = "Kprim"
-    difficulty: str
-    questionField: str
-    question: str
-    back: BackKprim
-
 
 class FreeText(BaseModel):
-    type: str = "Free Text"
-    difficulty: str
-    questionField: str
-    question: str
-    back: BackFreeText
+    gt_type: Literal["Free Text"]
+    answers: Optional[List[str]] = None  # No answers needed
+    explanation: str
 
 
 class Flashcard(BaseModel):
-    type: str = "Flashcard"
-    difficulty: str
-    questionField: str
-    question: str
-    back: BackFlashcard
+    gt_type: Literal["Flashcard"]
+    explanation: str  # List of correct answers
 
 
 class Content(BaseModel):
-    type: str = "Content"
+    gt_type: Literal["Content"]
+    answers: str
+
+
+class Base(BaseModel):
+    type: str
     difficulty: str
-    questionField: str
+    field: str
     question: str
-    back: BackContent
+
+    @field_validator("type", "difficulty", "field", "question", mode="before")
+    @staticmethod
+    def normalize_question_type(value: str):
+        if ":" in value:
+            return value.split(":")[1].strip()
+        return value.strip()
 
 
-# 定义解析函数
-def parse_question(context, num):
-    # 解析输入为多部分
+# Main question classes
+class Back(BaseModel):
+    option: (
+        SingleChoice
+        | MultipleChoices
+        | Numerical
+        | Kprim
+        | FreeText
+        | Flashcard
+        | Content
+    ) = Field(discriminator="gt_type")
+
+
+def parse_question(generated_text, num):
+    context = re.sub(r"```json|```", "", generated_text).strip()
+    context = re.sub(r"\*", "", context).strip()
+    context = context.replace("\\", "\\\\")
     parts = re.split(r"\n\s*\n", context)
-    if len(parts) == num + 1:
-        parts = parts[1:]  # 去掉第一部分（上下文描述）
-
+    if len(parts) >= num + 1:
+        parts = parts[len(parts) - num :]
     questions = []
     for part in parts:
         current_question = {}
-        part = re.split(r"\n\s*", part)  # 按换行分割
-        print(part)
-
-        # 提取基本字段
-        current_question["type"] = part[0].strip()
-        diff = part[1].upper()
-        if ":" in diff:
-            current_question["difficulty"] = diff.split(":")[1].strip()
-        else:
-            current_question["difficulty"] = diff.strip()
-
-        current_question["name"] = part[2]
-        current_question["question"] = part[3][10:]
-
-        # 提取 JSON 数据
-        json_text = ""
-        for block in part[4:]:
-            try:
-                json_text += block  # 累积 JSON 数据
-                json.loads(json_text)  # 尝试解析 JSON
-                break  # 如果成功解析，结束累积
-            except Exception:
-                continue
-
-        current_question["options"] = json_text.strip()
-        questions.append(current_question)
-
-    return questions
-
-
-# 解析后的数据进一步处理和验证
-def process_questions(generated_text, num):
-    # 调用解析函数
-    questions = parse_question(generated_text, num)
-
-    # 初始化结果列表
-    validated_data = []
-
-    for question in questions:
-        # 尝试解析 JSON
+        base_part = part.split("Back:")[0].strip()
+        base_data = json.loads(base_part)
+        back_data = {}
+        back_data["gt_type"] = base_data["type"]
+        back_part = part.split("Back:")[1].strip()
+        back_part = json.loads(back_part)
+        back_data.update(back_part)
         try:
-            options = json.loads(
-                question["options"].split("Back:")[1].strip()
-            )  # 提取 Back 对象
-        except Exception as e:
-            print(f"Error parsing JSON: {e}")
-            continue
-
-        # 验证 JSON 格式是否符合 Pydantic 模型
-        try:
-            validated_back = Back(**options)
-            validated_question = Question(
-                type=question["type"],
-                difficulty=question["difficulty"],
-                name=question["name"],
-                question=question["question"],
-                back=validated_back,
+            Base(**base_data)
+            Back(option=back_data)
+            current_question["type"] = base_data["type"]
+            current_question["difficulty"] = base_data["difficulty"].upper()
+            current_question["name"] = base_data["field"]
+            current_question["question"] = base_data.get("content") or base_data.get(
+                "question"
             )
-
-            # 如果验证成功，生成最终的 `data`
-            data = {
-                "content": validated_question.question,
-                "options": validated_question.back.dict(),  # 转换为字典格式
-                "type": validated_question.type,
-                "name": validated_question.name,
-                "difficulty": validated_question.difficulty,
-            }
-
-            validated_data.append(data)
-
+            current_question["options"] = back_part
+            questions.append(current_question)
         except ValidationError as e:
-            print(f"Validation failed: {e}")
-            continue
-
-    return validated_data
-
-
-# 测试数据
-generated_text = """
-Single Choice
-Difficulty: Easy
-Question 1
-What is the capital of France?
-{
-  "Back": {
-    "choices": [
-      {"ix": 0, "value": "Paris", "correct": true, "feedback": "Correct! Paris is the capital of France."},
-      {"ix": 1, "value": "London", "correct": false, "feedback": "Incorrect. London is the capital of the United Kingdom."},
-      {"ix": 2, "value": "Berlin", "correct": false, "feedback": "Incorrect. Berlin is the capital of Germany."},
-      {"ix": 3, "value": "Madrid", "correct": false, "feedback": "Incorrect. Madrid is the capital of Spain."}
-    ],
-    "displayMode": "LIST",
-    "hasSampleSolution": true,
-    "hasAnswerFeedbacks": true
-  }
-}
-"""
-
-# 执行函数
-results = process_questions(generated_text, 1)
-
-# 输出结果
-for data in results:
-    print(json.dumps(data, indent=4))
+            return e
+    return questions

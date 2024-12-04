@@ -9,15 +9,15 @@ import os
 import json
 import uuid
 from datetime import datetime
-from agent_haystack import PreProcess, Agent
+from agent_haystack_2 import PreProcess, Agent_stage1, Agent_stage2
 from prisma import Prisma
 import asyncio
 from datetime import timedelta
 import hashlib
+from parse_questions import parse_question
 
 # Set the file expiry time to 1 minute
 FILE_EXPIRATION_TIME = timedelta(minutes=60)
-
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 database_url = os.getenv("DATABASE_URL_1")
@@ -140,45 +140,6 @@ async def get_latest_pdf():
         raise
 
 
-def parse_question(context, num):
-    context = re.sub(r"```json|```", "", context).strip()
-    context = re.sub(r"\*", "", context).strip()
-    context = context.replace("\\", "\\\\")
-    parts = re.split(r"\n\s*\n", context)
-    if len(parts) == num + 1:
-        parts = parts[1:]
-
-    questions = []
-    for part in parts:
-        current_question = {}
-        part = re.split(r"\n\s*", part)
-        # print(part)
-        current_question["type"] = part[0].strip()
-        diff = part[1].upper()
-        if ":" in diff:
-            current_question["difficulty"] = diff.split(":")[1].strip()
-        else:
-            current_question["difficulty"] = diff.strip()
-        # current_question['difficulty'] = diff.split(":")[1].strip()
-        current_question["name"] = part[2]
-        if "Question:" or "Content:" in part[3]:
-            current_question["question"] = part[3].split(":", 1)[1].strip()
-        else:
-            current_question["question"] = part[3].strip()
-        json_text = ""
-        for block in part[4:]:
-            try:
-                json_text += block
-                json.loads(json_text)
-                break
-            except Exception:
-                continue
-        current_question["options"] = json_text
-        questions.append(current_question)
-
-    return questions
-
-
 def map_question_type(generated_type):
     type_mapping = {
         "Single Choice": "SC",
@@ -201,45 +162,25 @@ def map_difficulty_level(difficulty_level):
 async def insert_questions_to_db(questions):
     try:
         for question in questions:
-            # check if 'options' contain 'explanation:'
-            if '"explanation":' in question["options"]:
-                db.elementgenerated.create(
-                    data={
-                        "content": question["question"],
-                        "options": json.dumps(
-                            json.loads(question["options"].split("Back:")[1].strip())
-                        ),
-                        "type": map_question_type(question["type"]),
-                        "name": question["name"],
-                        "ownerId": str(
-                            uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")
-                        ),
-                        "createdAt": datetime.now(),
-                        "updatedAt": datetime.now(),
-                        "difficulty": question["difficulty"],
-                        "explanation": str(
-                            question["options"].split('"explanation":')[1].strip()
-                        ).strip(' "{}'),
-                    }
-                )
-            else:
-                # without 'explanation:' ，set None
-                db.elementgenerated.create(
-                    data={
-                        "content": question["question"],
-                        "options": json.dumps(
-                            json.loads(question["options"].split("Back:")[1].strip())
-                        ),
-                        "type": map_question_type(question["type"]),
-                        "name": question["name"],
-                        "ownerId": str(
-                            uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")
-                        ),
-                        "createdAt": datetime.now(),
-                        "updatedAt": datetime.now(),
-                        "difficulty": question["difficulty"],
-                    }
-                )
+            db.elementgenerated.create(
+                data={
+                    "content": question["question"],
+                    "options": json.dumps(question["options"]),
+                    "type": map_question_type(question["type"]),
+                    "name": question["name"],
+                    "ownerId": str(uuid.UUID("76047345-3801-4628-ae7b-adbebcfe8821")),
+                    "createdAt": datetime.now(),
+                    "updatedAt": datetime.now(),
+                    "difficulty": question["difficulty"],
+                    "explanation": (
+                        question["options"]
+                        .get("explanation", "")
+                        .split("'explanation':")[-1]
+                        if "explanation" in question["options"]
+                        else ""
+                    ),
+                }
+            )
         logging.info(
             f"Successfully inserted {len(questions)} questions into the database."
         )
@@ -253,7 +194,7 @@ agent_cache = None
 
 @app.post("/generate")
 async def generate_questions(request: GenerateQuestionsRequest):
-    global filename, agent_cache
+    global filename, agent_cache, generated_text1
 
     questions_number = request.limit
     language = request.language
@@ -267,9 +208,12 @@ async def generate_questions(request: GenerateQuestionsRequest):
     logging.info("Starting the question generation process...")
 
     pdf_file_path = os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
-    prompt_path = os.path.join(os.getcwd(), "template.txt")
-    with open(prompt_path, "r", encoding="utf-8") as file:
-        template = file.read()
+    prompt_path1 = os.path.join(os.getcwd(), "stage1.txt")
+    prompt_path2 = os.path.join(os.getcwd(), "stage2.txt")
+    with open(prompt_path1, "r", encoding="utf-8") as file:
+        stage1 = file.read()
+    with open(prompt_path2, "r", encoding="utf-8") as file:
+        stage2 = file.read()
     is_new_file = check_if_new_file(pdf_file_path)
     logging.info(f"Is there any new file {is_new_file}")
     if agent_cache is None:
@@ -277,21 +221,40 @@ async def generate_questions(request: GenerateQuestionsRequest):
     else:
         logging.info("Agent_cache IS NOT NONE")
 
+    MAX_RETRIES = 3
+    retry_count = 0
+    generated_text1 = None
     if is_new_file or agent_cache is None:
         logging.info("Initializing OpenAI generator and retriever...")
-        try:
-            preprocess = PreProcess()
-            preprocess.init()
-            retriever = preprocess.run_preprocess(pdf_file_path)
-            agent = Agent(retriever=retriever, model=model, template=template)
-            agent.init()
-            agent_cache = agent
-        except Exception as e:
-            logging.error(f"Error initializing OpenAI pipeline: {e}")
+        while generated_text1 is None and retry_count < MAX_RETRIES:
+            try:
+                preprocess = PreProcess()
+                preprocess.init()
+                retriever = preprocess.run_preprocess(pdf_file_path)
+                agent1 = Agent_stage1(retriever=retriever, model=model, template=stage1)
+                agent1.init()
+                logging.info(f"Running Agent_stage1 (attempt {retry_count + 1})...")
+                response1 = agent1.run_agent()
+                generated_text1 = response1["answer_builder"]["answers"][0].data
+                if not generated_text1:  # 检查生成结果是否为空
+                    raise ValueError("Generated text1 is empty.")
+                else:
+                    logging.info(f"Generated text:\n{generated_text1}")
+            except Exception as e:
+                retry_count += 1
+                logging.error(f"Error in generating text1: {e}")
+                if retry_count < MAX_RETRIES:
+                    logging.info("Retrying Agent_stage1...")
+                else:
+                    logging.error("Maximum retries reached for Agent_stage1.")
+                    raise  # 如果达到最大重试次数，抛出异常
+        agent2 = Agent_stage2(retriever=generated_text1, model=model, template=stage2)
+        agent2.init()
+        agent_cache = agent2
     else:
-        agent = agent_cache
+        agent2 = agent_cache
         logging.info("No new file detected. Using existing Agent...")
-    generated_text = None
+    generated_text2 = None
 
     # Retry logic
     MAX_RETRIES = 3
@@ -300,28 +263,32 @@ async def generate_questions(request: GenerateQuestionsRequest):
 
     while not success and retry_count < MAX_RETRIES:
         try:
-            if generated_text is None:
+            if generated_text2 is None:
                 # If generate error,restart agent
                 logging.info(f"Generating response (attempt {retry_count + 1})...")
                 try:
-                    response = agent.run_agent(
+                    response2 = agent2.run_agent(
                         questions_number, language, difficulty, type
                     )
-                    generated_text = response["answer_builder"]["answers"][0].data
-                    if not generated_text:
+                    generated_text2 = response2["answer_builder"]["answers"][0].data
+                    logging.info(f"Generated text:\n{generated_text2}")
+                    if not generated_text2:
                         raise ValueError("Generated text is empty.")
                     else:
-                        logging.info(f"Generated text:\n{generated_text}")
+                        logging.info(f"Generated text:\n{generated_text2}")
                 except Exception as e:
                     logging.error(f"Error during generation: {e}")
                     raise
 
                     # format the output
-            questions = parse_question(generated_text, request.limit)
+            result = parse_question(generated_text2, questions_number)
+            if isinstance(result, str) and result.startswith("Error"):
+                logging.error(f"Error during generation: {result}")
+                raise
 
             # insert into the database
             logging.info("Inserting questions into the database...")
-            await insert_questions_to_db(questions)
+            await insert_questions_to_db(result)
             success = True
 
         except Exception as e:
@@ -331,12 +298,9 @@ async def generate_questions(request: GenerateQuestionsRequest):
             # restart agent
             try:
                 if is_new_file:
-                    preprocess = PreProcess()
-                    preprocess.init()
-                    retriever = preprocess.run_preprocess(pdf_file_path)
-                    agent = Agent(retriever=retriever, model=model, template=template)
-                    agent.init()
-                    agent_cache = agent
+                    agent2 = Agent_stage2(retriever=generated_text1, template=stage2)
+                    agent2.init()
+                    agent_cache = agent2
                 else:
                     continue
             except Exception as init_error:
@@ -349,8 +313,7 @@ async def generate_questions(request: GenerateQuestionsRequest):
         )
         return {"error": "Failed to insert questions into the database."}
 
-    # return {"latestNQuestions": questions}
-    return questions
+    return {"latestNQuestions": generated_text2}
 
 
 # Receive PDF file and save it into /tmp folder
