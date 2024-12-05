@@ -802,6 +802,7 @@ Since the KlickerUZH app is not yet available on the iOS App Store, follow these
       noModelError: 'Please select a model to generate questions to continue',
       noLanguageError: 'Please select the language of questions to continue',
       noDifficultyError: 'Please select the difficulty level of questions to continue',
+      unexpectedError: 'An unexpected error occured, please retry',
       chooseDifficulty:'Choose the difficulty level of questions you want to generate, or RANDOM if unsure',
       random: 'RANDOM',
       generatingTab: 'Generating Questions',

@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@apollo/client'
+import { useQuery, useMutation, ApolloError } from '@apollo/client'
 import Loader from '@klicker-uzh/shared-components/src/Loader'
 import { GetStaticPropsContext } from 'next'
 import { useTranslations } from 'next-intl'
@@ -110,14 +110,7 @@ export default function Home() {
         setIsGenerating(true); 
         setGenerateError(null);
         setQuestions([]); //clear old data
-        // try {
-        //     const response = await fetch('http://localhost:8000/generate', {
-        //         method: 'POST',
-        //         headers: {
-        //             'Content-Type': 'application/json',
-        //         },
-        //         body: JSON.stringify({ limit: numQuestions, language: selectedLanguage, type: selectedType, difficulty: difficultyLevel,model:selectedModel }),  // 发送生成问题的数量
-        //     });
+
         try {
             const response = await generatedQuestion({
                     variables: {
@@ -141,8 +134,23 @@ export default function Home() {
             }   
             
         } catch (error) {
-            console.error('Error fetching questions:', error);
-            setGenerateError(`${error instanceof Error ? error.message : 'An unexpected error occurred'}. Please retry.`);
+            console.error('Error generating questions:', error);
+            if (error instanceof ApolloError) {
+                const graphQLErrors = error.graphQLErrors.map((e) => e.message).join(', ');
+                const networkError = error.networkError?.message;
+        
+                // Display GraphQL error
+                if (graphQLErrors) {
+                    setGenerateError(`${graphQLErrors}, Please retry`);
+                } else if (networkError) {
+                    setGenerateError(`${networkError}.Please retry`);
+                } else {
+                    setGenerateError(t('manage.aiRelate.unexpectedError'));
+                }
+            } else {
+                // Display not  ApolloError
+                setGenerateError(`${error instanceof Error ? error.message : 'An unexpected error occurred'}. Please retry.`);
+            }
             setQuestionsGenerated(false);
         } finally {
             setIsGenerating(false); 

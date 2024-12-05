@@ -800,6 +800,7 @@ Da die KlickerUZH-App noch nicht im iOS-App-Store verfügbar ist, folgen Sie die
       noModelError: 'Bitte wählen Sie ein Modell aus, um Fragen zu generieren und fortzufahren',
       noLanguageError: 'Bitte wählen Sie die Sprache der Fragen aus, um fortzufahren',
       noDifficultyError: 'Bitte wählen Sie den Schwierigkeitsgrad der Fragen aus, um fortzufahren',
+      unexpectedError: 'Ein unerwarteter Fehler ist aufgetreten, bitte versuchen Sie es erneut',
       chooseDifficulty:'Wählen Sie den Schwierigkeitsgrad der Fragen, die Sie erstellen möchten, oder RANDOM, wenn Sie unsicher sind',
       random: 'RANDOM',
       generatingTab: 'Fragen Erzeugen',
