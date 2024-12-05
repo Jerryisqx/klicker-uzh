@@ -791,6 +791,7 @@ Since the KlickerUZH app is not yet available on the iOS App Store, follow these
       next: 'Next',
       page: 'Page {currentPage} of {totalPages}',
       fileUpload: 'Upload a file for generating:',
+      noFileSelected: 'No file selected. Please select a file to upload.',
       uploadFile: 'UPLOAD FILE',
       selectModel: 'Choose the model you want to generate qeustions with',
       fileSuccess: 'File upload success!',

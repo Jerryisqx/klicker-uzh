@@ -46,6 +46,9 @@ export default function Home() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [activeTab, setActiveTab] = useState<'generating' | 'history'>('generating');
     const [currentPage, setCurrentPage] = useState<number>(1);
+    const [generateError, setGenerateError] = useState<string | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+
     const itemsPerPage = 10; // number of question displayed per page
 
     const [generatedQuestion] = useMutation(GenerateQuestionsApiDocument);
@@ -93,6 +96,7 @@ export default function Home() {
     // Handle the click event for "Generate Question" button
     const handleGenerateQuestions = async () => {
         setIsGenerating(true); 
+        setGenerateError(null);
         // try {
         //     const response = await fetch('http://localhost:8000/generate', {
         //         method: 'POST',
@@ -125,6 +129,7 @@ export default function Home() {
             
         } catch (error) {
             console.error('Error fetching questions:', error);
+            setGenerateError(`${error instanceof Error ? error.message : 'An unexpected error occurred'}. Please retry.`);
         } finally {
             setIsGenerating(false); 
         }
@@ -139,8 +144,12 @@ export default function Home() {
 
     const handleFileUpload = async () => {
         if (!selectedFile) {
+            setUploadError(t('manage.aiRelate.noFileSelected')); 
             return;
         }
+
+        setUploadError(null);
+        setUploadSuccess(null); 
 
         const formData = new FormData();
         formData.append('file', selectedFile);
@@ -154,10 +163,16 @@ export default function Home() {
             if (response.ok) {
                 console.log('File successfully uploaded');
                 setUploadSuccess(true);
-
+            } else {
+                const errorMessage = await response.text(); 
+                setUploadError(errorMessage || t('manage.aiRelate.fileFail'));
+                setUploadSuccess(false);
             }
         } catch (error) {
             console.error('Error uploading file:', error);
+            setUploadError(
+                `${error instanceof Error ? error.message : 'An unexpected error occurred'}. Please retry.`
+            );
             setUploadSuccess(false);
 
         }
@@ -234,12 +249,24 @@ export default function Home() {
                         >
                             <Button.Label>{t('manage.aiRelate.uploadFile')}</Button.Label>
                         </Button>
+
                         {/*Notification of file upload status*/} 
-                        {uploadSuccess === true && (
-                            <div className="mt-2 text-green-600 font-medium">{t('manage.aiRelate.fileSuccess')}</div>
+                        {uploadError && (
+                            <Label
+                                label={`${t('shared.generic.error')}: ${uploadError}`}
+                                className={{
+                                    root: 'block mb-2 text-sm font-semibold text-red-600',
+                                }}
+                            />
                         )}
-                        {uploadSuccess === false && (
-                            <div className="mt-2 text-red-600 font-medium">{t('manage.aiRelate.fileFail')}</div>
+
+                        {uploadSuccess === true && (
+                            <Label
+                                label={t('manage.aiRelate.fileSuccess')}
+                                className={{
+                                    root: 'block mb-2 text-sm font-semibold text-green-600',
+                                }}
+                            />
                         )}
 
                     </div>
@@ -452,6 +479,15 @@ export default function Home() {
                         >
                             {t('manage.aiRelate.genCap')}
                         </Button>
+                        {generateError && (
+                            <Label
+                                label={`${t('shared.generic.error')}: ${generateError}`}
+                                className={{
+                                    root: 'block mb-2 text-sm font-semibold text-red-600',
+                                }}
+                            />
+                            )
+                        }
                     </div>
                 </div>
 

@@ -789,6 +789,7 @@ Da die KlickerUZH-App noch nicht im iOS-App-Store verfügbar ist, folgen Sie die
       next: 'Next',
       page: 'Seite {currentPage} von {totalPages}',
       fileUpload: 'Laden Sie eine Datei zun Generieren hoch:',
+      noFileSelected: 'Keine Datei ausgewählt. Bitte wählen Sie eine Datei zum Hochladen.',
       uploadFile: 'DATET HOCHLADEN',
       selectModel: 'Wählen Sie das Modell aus, mit dem Sie Antworten generieren möchten',
       fileSuccess: 'Dateiupload erfolgreich!',
