@@ -35,7 +35,7 @@ export default function Home() {
   
     const [selectedType, setSelectedType] = useState<string>();
     const [selectedModel,setSelectedModel] = useState<string>();
-    const [numQuestions, setNumQuestions] = useState<string>('2');
+    const [numQuestions, setNumQuestions] = useState<string>();
     const [difficultyLevel, setDifficultyLevel] = useState<string>();
     const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
     const [questionsGenerated, setQuestionsGenerated] = useState(false);
@@ -67,12 +67,18 @@ export default function Home() {
 
     const { loading: loadingCount, error: errorCount, data: dataCount, refetch: refetchCount } = useQuery(GetGeneratedQuestionsCountDocument);
 
-    // const { data: dataMaxId } = useQuery(GetHistoryGeneratedQuestionsDocument, {
-    //     variables: {
-    //         limit: 1, 
-    //         offset: 0, 
-    //     },
-    // });
+    const validateSelections = () => {
+        const errors: string[] = [];
+        if (!selectedType) errors.push(t('manage.aiRelate.noTypeError'));
+        if (!selectedModel) errors.push(t('manage.aiRelate.noModelError'));
+        if (!selectedLanguage) errors.push(t('manage.aiRelate.noLanguageError'));
+        if (!difficultyLevel) errors.push(t('manage.aiRelate.noDifficultyError'));
+        if (!numQuestions) errors.push(t('manage.aiRelate.noNumQError'));
+        if (!selectedFile) errors.push(t('manage.aiRelate.noFileSelected'))
+    
+        return errors;
+    };
+    
     
     // Calculate total pages
     const totalItems = dataCount?.getGeneratedQuestionsCount || 0;
@@ -95,8 +101,15 @@ export default function Home() {
 
     // Handle the click event for "Generate Question" button
     const handleGenerateQuestions = async () => {
+        const validationErrors = validateSelections();
+        if (validationErrors.length > 0) {
+            setGenerateError(validationErrors.join(', ')); 
+            setQuestionsGenerated(false);
+            return; // Stop calling API
+        }
         setIsGenerating(true); 
         setGenerateError(null);
+        setQuestions([]); //clear old data
         // try {
         //     const response = await fetch('http://localhost:8000/generate', {
         //         method: 'POST',
@@ -519,14 +532,12 @@ export default function Home() {
                         isGenerating ? (
                             <Loader />
                         ) :generateError ? (
-                        
                             <Label
                                 label={`${t('shared.generic.error')}: ${generateError}`}
                                 className={{
                                         root: 'block mb-2 text-sm font-semibold text-red-600',
                                 }}
-                            />
-                            
+                            />                            
                         )
                         : errorQuestions ? (
                             <div>{t('shared.generic.error')}: {errorQuestions.message}</div>
