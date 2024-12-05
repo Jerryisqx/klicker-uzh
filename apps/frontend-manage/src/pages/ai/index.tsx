@@ -130,6 +130,7 @@ export default function Home() {
         } catch (error) {
             console.error('Error fetching questions:', error);
             setGenerateError(`${error instanceof Error ? error.message : 'An unexpected error occurred'}. Please retry.`);
+            setQuestionsGenerated(false);
         } finally {
             setIsGenerating(false); 
         }
@@ -479,15 +480,6 @@ export default function Home() {
                         >
                             {t('manage.aiRelate.genCap')}
                         </Button>
-                        {generateError && (
-                            <Label
-                                label={`${t('shared.generic.error')}: ${generateError}`}
-                                className={{
-                                    root: 'block mb-2 text-sm font-semibold text-red-600',
-                                }}
-                            />
-                            )
-                        }
                     </div>
                 </div>
 
@@ -526,7 +518,17 @@ export default function Home() {
                     {activeTab === 'generating' && (
                         isGenerating ? (
                             <Loader />
-                        ) : errorQuestions ? (
+                        ) :generateError ? (
+                        
+                            <Label
+                                label={`${t('shared.generic.error')}: ${generateError}`}
+                                className={{
+                                        root: 'block mb-2 text-sm font-semibold text-red-600',
+                                }}
+                            />
+                            
+                        )
+                        : errorQuestions ? (
                             <div>{t('shared.generic.error')}: {errorQuestions.message}</div>
                         ) : questionsGenerated && !loadingQuestions ? (
                           <QuestionList
