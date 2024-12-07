@@ -86,14 +86,14 @@ class DocumentStore:
         return self.document_store
 
     def _start_timer(self):
-        # Periodically check if 10 minutes have passed at self.check_interval
+        # Periodically check if n minutes have passed at self.check_interval
         timer = threading.Timer(self.check_interval, self._check_time)
         timer.start()
 
     def _check_time(self):
         # Calculate the time difference
         elapsed_time = time.time() - self.start_time
-        if elapsed_time > 2 * 60:  # 10 mintues
+        if elapsed_time > 2 * 60:  # n mintues (n * 60)
             self.delete()
         else:
             self._start_timer()
@@ -101,7 +101,7 @@ class DocumentStore:
     def delete(self):
         ids = redis_cache.lrange("document_id", 0, -1)
         ids = [i_d.decode("utf-8") for i_d in ids]
-        logging.info(f"Over 2 mins, deleting {len(ids)} documents from {self.filename}")
+        logging.info(f"Deleting {len(ids)} documents from {self.filename.decode("utf-8")}")
         self.document_store.delete_documents(ids)
         self.document_store.delete_documents(["agent_cache"])
         delete_pipe = redis_cache.pipeline()

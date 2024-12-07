@@ -177,7 +177,7 @@ async def generate_questions(request: GenerateQuestionsRequest):
     retry_count = 0
     generated_text1 = None
 
-    if int(redis_cache.get("document_store")) == 0:
+    if redis_cache.exists("document_store") == 0:
         logging.error("Cached File are deleted, please upload new file again!")
         return {"error": "Cannot find document store."}
     else:
@@ -279,10 +279,20 @@ async def upload_pdf(file: UploadFile = File(...)):
     filename = str(file.filename)
     buf = BytesIO(input_bytes)
 
-    upload_pipe = redis_cache.pipeline()
+    if redis_cache.exists("filename") == 1 and redis_cache.get("filename").decode("utf-8") == filename:
+        document_store = DocumentStore(filename).get_store()
+        if document_store.count_documents() != 0:
+            logging.info("Uploaded file in cache, using cached data ...")
+            return {"message": "Upload successful"}
+    elif redis_cache.exists("filename") == 1 and redis_cache.get("filename").decode("utf-8") != filename:
+        logging.info("Found unused cached memory, deleting first ...")
+        DocumentStore(redis_cache.get("filename")).delete()
+
     document_store = DocumentStore(filename).get_store()
     DocConveter = Converter(buf, filename, document_store)
     ids = DocConveter.convert()
+
+    upload_pipe = redis_cache.pipeline()
     upload_pipe.set("filename", filename)
     upload_pipe.set("document_store", 1)
     for i_d in ids:
