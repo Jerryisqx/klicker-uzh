@@ -3,6 +3,7 @@
 
 import logging
 import os
+import json
 
 # API and KEY set
 import subprocess
@@ -22,8 +23,24 @@ os.environ["HAYSTACK_CONTENT_TRACING _ENABLED"] = "True"
 
 from pathlib import Path
 from getpass import getpass
+from docling.datamodel.base_models import InputFormat
+from docling.pipeline.simple_pipeline import SimplePipeline
+from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+from docling.document_converter import (
+    DocumentConverter,
+    PdfFormatOption,
+    WordFormatOption,
+    PowerpointFormatOption,
+)
+from docling.datamodel.document import ConversionResult
+from docling_core.transforms.chunker import HierarchicalChunker
+
+# from docling_core.transforms.chunker import hierarchical_chunker
+from docling_core.transforms.chunker.base import BaseChunk
 from haystack import Pipeline, Document
+from haystack_integrations.document_stores.chroma import ChromaDocumentStore
 from haystack.document_stores.in_memory import InMemoryDocumentStore
+from haystack.document_stores.types import DuplicatePolicy
 from haystack.components.converters import PyPDFToDocument
 from haystack.components.routers import FileTypeRouter
 from haystack.components.preprocessors import DocumentSplitter, DocumentCleaner
@@ -36,7 +53,10 @@ from haystack.components.embedders import (
     OpenAITextEmbedder,
 )
 from haystack.components.generators import OpenAIGenerator, HuggingFaceAPIGenerator
-from haystack.components.retrievers.in_memory import InMemoryEmbeddingRetriever
+from haystack.components.retrievers.in_memory import (
+    InMemoryEmbeddingRetriever,
+    InMemoryBM25Retriever,
+)
 from haystack.components.builders import PromptBuilder, AnswerBuilder
 from haystack_integrations.components.connectors.langfuse import LangfuseConnector
 from haystack_integrations.components.generators.anthropic import AnthropicGenerator
@@ -45,61 +65,91 @@ from haystack_integrations.components.generators.google_ai import (
 )
 
 
-class PreProcess:
-    def __init__(self):
-        self.preprocess_pipeline = Pipeline()
-        self.document_store = InMemoryDocumentStore()
-        self.file_type_router = FileTypeRouter(mime_types=["application/pdf"])
-        self.pdf_converter = PyPDFToDocument()
-        self.document_joiner = DocumentJoiner()
-        self.document_cleaner = DocumentCleaner()
-        self.document_splitter = DocumentSplitter(split_by="page")
-        self.doc_embedder = SentenceTransformersDocumentEmbedder(
-            model="sentence-transformers/all-MiniLM-L6-v2"
-        )
-        # self.doc_embedder = OpenAIDocumentEmbedder(model="text-embedding-3-large")
-        self.doc_writer = DocumentWriter(self.document_store)
-        self.retriever = None
+def docConvert(doc):
+    pipeline_options = PdfPipelineOptions()
+    pipeline_options.do_ocr = False
+    pipeline_options.do_table_structure = True
+    pipeline_options.table_structure_options.do_cell_matching = True
 
-    def init(self):
-        self.preprocess_pipeline.add_component(
-            instance=self.file_type_router, name="file_type_router"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.pdf_converter, name="pypdf_converter"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.document_joiner, name="document_joiner"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.document_cleaner, name="document_cleaner"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.document_splitter, name="document_splitter"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.doc_embedder, name="document_embedder"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.doc_writer, name="document_writer"
-        )
-        self.preprocess_pipeline.connect(
-            "file_type_router.application/pdf", "pypdf_converter.sources"
-        )
-        self.preprocess_pipeline.connect("pypdf_converter", "document_joiner")
-        self.preprocess_pipeline.connect("document_joiner", "document_cleaner")
-        self.preprocess_pipeline.connect("document_cleaner", "document_splitter")
-        self.preprocess_pipeline.connect("document_splitter", "document_embedder")
-        self.preprocess_pipeline.connect("document_embedder", "document_writer")
+    doc_converter = DocumentConverter(
+        allowed_formats=[
+            InputFormat.PDF,
+            InputFormat.DOCX,
+            InputFormat.PPTX,
+        ],
+        format_options={
+            InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
+            InputFormat.DOCX: WordFormatOption(pipeline_cls=SimplePipeline),
+            InputFormat.PPTX: PowerpointFormatOption(pipeline_cls=SimplePipeline),
+        },
+    )
 
-    def run_preprocess(self, doc_path):
-        doc_path = Path(doc_path)
-        self.preprocess_pipeline.run(
-            {"file_type_router": {"sources": [doc_path]}},
-            include_outputs_from=["document_splitter"],
-        )
-        self.retriever = InMemoryEmbeddingRetriever(self.document_store)
-        return self.retriever
+    convert_doc: ConversionResult = doc_converter.convert(doc)
+    convert_doc = convert_doc.document
+    chunks = list(HierarchicalChunker().chunk(convert_doc))
+    documentstore = InMemoryDocumentStore()
+    documents = []
+    for chunk in chunks:
+        documents.append(Document(content=chunk.text))
+    documentstore.write_documents(documents=documents, policy=DuplicatePolicy.SKIP)
+    return documentstore
+
+
+# class PreProcess:
+#     def __init__(self):
+#         self.preprocess_pipeline = Pipeline()
+#         self.document_store = InMemoryDocumentStore()
+#         self.file_type_router = FileTypeRouter(mime_types=["application/pdf"])
+#         self.pdf_converter = PyPDFToDocument()
+#         self.document_joiner = DocumentJoiner()
+#         self.document_cleaner = DocumentCleaner()
+#         self.document_splitter = DocumentSplitter(split_by="page")
+#         self.doc_embedder = SentenceTransformersDocumentEmbedder(
+#             model="sentence-transformers/all-MiniLM-L6-v2"
+#         )
+#         # self.doc_embedder = OpenAIDocumentEmbedder(model="text-embedding-3-large")
+#         self.doc_writer = DocumentWriter(self.document_store)
+#         self.retriever = None
+
+#     def init(self):
+#         self.preprocess_pipeline.add_component(
+#             instance=self.file_type_router, name="file_type_router"
+#         )
+#         self.preprocess_pipeline.add_component(
+#             instance=self.pdf_converter, name="pypdf_converter"
+#         )
+#         self.preprocess_pipeline.add_component(
+#             instance=self.document_joiner, name="document_joiner"
+#         )
+#         self.preprocess_pipeline.add_component(
+#             instance=self.document_cleaner, name="document_cleaner"
+#         )
+#         self.preprocess_pipeline.add_component(
+#             instance=self.document_splitter, name="document_splitter"
+#         )
+#         self.preprocess_pipeline.add_component(
+#             instance=self.doc_embedder, name="document_embedder"
+#         )
+#         self.preprocess_pipeline.add_component(
+#             instance=self.doc_writer, name="document_writer"
+#         )
+#         self.preprocess_pipeline.connect(
+#             "file_type_router.application/pdf", "pypdf_converter.sources"
+#         )
+#         self.preprocess_pipeline.connect("pypdf_converter", "document_joiner")
+#         self.preprocess_pipeline.connect("document_joiner", "document_cleaner")
+#         self.preprocess_pipeline.connect("document_cleaner", "document_splitter")
+#         self.preprocess_pipeline.connect("document_splitter", "document_embedder")
+#         self.preprocess_pipeline.connect("document_embedder", "document_writer")
+
+#     def run_preprocess(self, doc_path):
+#         doc_path = Path(doc_path)
+#         self.preprocess_pipeline.run(
+#             {"file_type_router": {"sources": [doc_path]}},
+#             include_outputs_from=["document_splitter"],
+#         )
+#         self.retriever = InMemoryEmbeddingRetriever(self.document_store)
+#         return self.retriever
 
 
 def extract_questions(context, num, generated_content):
@@ -121,10 +171,10 @@ def extract_questions(context, num, generated_content):
 
 
 class Agent:
-    def __init__(self, retriever, model, template):
+    def __init__(self, model, template, document_store):
         # Openai API Key
         self.model = model
-        self.retriever = retriever
+        self.retriever = InMemoryBM25Retriever(document_store=document_store)
         self.rag_pipeline = Pipeline()
         self.tracer = LangfuseConnector("Basic RAG Pipeline")
         if model == "OpenAI":
@@ -140,9 +190,9 @@ class Agent:
         # else:
         #     self.api_key = os.getenv("TOGETHER_API_KEY")
         #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
-        self.text_embedder = SentenceTransformersTextEmbedder(
-            model="sentence-transformers/all-MiniLM-L6-v2"
-        )
+        # self.text_embedder = SentenceTransformersTextEmbedder(
+        #     model="sentence-transformers/all-MiniLM-L6-v2"
+        # )
         self.generated_content = ""
         self.templete = template
         self.prompt_builder = PromptBuilder(template=self.templete)
@@ -151,16 +201,16 @@ class Agent:
     def init(self):
         # Add components to your pipeline
         self.rag_pipeline.add_component("tracer", self.tracer)
-        self.rag_pipeline.add_component("text_embedder", self.text_embedder)
+        # self.rag_pipeline.add_component("text_embedder", self.text_embedder)
         self.rag_pipeline.add_component("retriever", self.retriever)
         self.rag_pipeline.add_component("prompt_builder", self.prompt_builder)
         self.rag_pipeline.add_component("llm", self.generator)
         self.rag_pipeline.add_component("answer_builder", self.answer_builder)
 
         # Now, connect the components to each other
-        self.rag_pipeline.connect(
-            "text_embedder.embedding", "retriever.query_embedding"
-        )
+        # self.rag_pipeline.connect(
+        #     "text_embedder.embedding", "retriever"
+        # )
         self.rag_pipeline.connect("retriever", "prompt_builder.documents")
         self.rag_pipeline.connect("prompt_builder", "llm")
         self.rag_pipeline.connect("llm.replies", "answer_builder.replies")
@@ -169,10 +219,11 @@ class Agent:
 
     def run_agent(self, question_number, language, difficulty_level, question_type):
         question = f"Please generate {question_number} {question_type} questions, the difficulty of the questions is {difficulty_level}, and the question language is {language}."
-        generation_kwargs = {"max_tokens": 4096}
+        generation_kwargs = {"max_tokens": 8192}
         response = self.rag_pipeline.run(
             {
-                "text_embedder": {"text": question},
+                # "text_embedder": {"text": question},
+                "retriever": {"query": question},
                 "prompt_builder": {
                     "question": question,
                     "generated_content": self.generated_content,
@@ -181,6 +232,7 @@ class Agent:
                 "answer_builder": {"query": question},
             }
         )
+        print(response["answer_builder"]["answers"][0].data)
         self.generated_content = extract_questions(
             response["answer_builder"]["answers"][0].data,
             question_number,

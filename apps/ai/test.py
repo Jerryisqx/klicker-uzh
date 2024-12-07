@@ -1,9 +1,34 @@
-import os
+from locust import HttpUser, task, between
 
-print(os.environ.get("DATABASE_URL_1"))
 
-from litellm import LiteLLM
+class FastAPIUser(HttpUser):
+    # 设置每个用户之间的等待时间
+    wait_time = between(1, 3)
 
-print(os.environ.get("OPENAI_API_KEY"))
-client = LiteLLM(api_key="OPENAI_API_KEY", model="gpt-4o-2024-11-20")
-print("LiteLLM loaded successfully!")
+    @task
+    def send_message(self):
+        # 模拟发送 POST 请求到 FastAPI 应用
+        self.client.post(
+            "/generate/",
+            json={
+                "limit": 2,
+                "language": "English",
+                "difficulty": "EASY",
+                "type": "Single Choice",
+                "model": "OpenAI",
+            },
+        )
+
+    @task
+    def send_another_message(self):
+        # 另一个任务，模拟不同的 POST 请求
+        self.client.post(
+            "/generate/",
+            json={
+                "limit": 2,
+                "language": "English",
+                "difficulty": "EASY",
+                "type": "Single Choice",
+                "model": "OpenAI",
+            },
+        )

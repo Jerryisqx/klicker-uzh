@@ -9,12 +9,12 @@ import os
 import json
 import uuid
 from datetime import datetime
-from agent_haystack import PreProcess, Agent
+from agent_haystack import Agent, docConvert
 from prisma import Prisma
 import asyncio
 from datetime import timedelta
 import hashlib
-from parse_questions import test_format, parse_question
+from parse_questions import parse_question
 
 # 设置文件过期时间为1分钟
 FILE_EXPIRATION_TIME = timedelta(minutes=60)
@@ -181,10 +181,11 @@ async def generate_questions(request: GenerateQuestionsRequest):
     if is_new_file or agent_cache is None:
         logging.info("Initializing OpenAI generator and retriever...")
         try:
-            preprocess = PreProcess()
-            preprocess.init()
-            retriever = preprocess.run_preprocess(pdf_file_path)
-            agent = Agent(retriever=retriever, model=model, template=template)
+            # preprocess = PreProcess()
+            # preprocess.init()
+            # retriever = preprocess.run_preprocess(pdf_file_path)
+            document_store = docConvert(pdf_file_path)
+            agent = Agent(model=model, template=template, document_store=document_store)
             agent.init()
             agent_cache = agent
         except Exception as e:

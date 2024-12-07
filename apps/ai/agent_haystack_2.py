@@ -3,14 +3,20 @@
 
 import logging
 import os
+import hashlib
+import time
+import threading
 
 # API and KEY set
 import subprocess
 import re
 import json
-from litellm import completion
-from litellm import LiteLLM
+import redis
+
+# from litellm import completion
+# from litellm import LiteLLM
 from haystack import component
+
 # OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 # LLAMA_API_KEY= os.getenv("LLAMA_API_KEY")
@@ -25,8 +31,24 @@ os.environ["HAYSTACK_CONTENT_TRACING _ENABLED"] = "True"
 
 from pathlib import Path
 from getpass import getpass
+import threading
+from docling.datamodel.base_models import InputFormat, DocumentStream
+from docling.pipeline.simple_pipeline import SimplePipeline
+from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
+from docling.document_converter import (
+    DocumentConverter,
+    PdfFormatOption,
+    WordFormatOption,
+    PowerpointFormatOption,
+)
+from docling.datamodel.document import ConversionResult
+from docling_core.transforms.chunker import HierarchicalChunker
+
+# from docling_core.transforms.chunker import hierarchical_chunker
+from docling_core.transforms.chunker.base import BaseChunk
 from haystack import Pipeline, Document
 from haystack.document_stores.in_memory import InMemoryDocumentStore
+from haystack.document_stores.types import DuplicatePolicy
 from haystack.components.converters import PyPDFToDocument
 from haystack.components.routers import FileTypeRouter
 from haystack.components.preprocessors import DocumentSplitter, DocumentCleaner
@@ -37,70 +59,98 @@ from haystack.components.embedders import (
     SentenceTransformersTextEmbedder,
 )
 from haystack.components.generators import OpenAIGenerator, HuggingFaceAPIGenerator
-from haystack.components.retrievers.in_memory import InMemoryEmbeddingRetriever
+from haystack.components.retrievers.in_memory import (
+    InMemoryEmbeddingRetriever,
+    InMemoryBM25Retriever,
+)
 from haystack.components.builders import PromptBuilder, AnswerBuilder
 from haystack_integrations.components.connectors.langfuse import LangfuseConnector
 from haystack_integrations.components.generators.anthropic import AnthropicGenerator
 from haystack_integrations.components.generators.google_ai import (
     GoogleAIGeminiGenerator,
 )
-from haystack.components.retrievers.in_memory import InMemoryBM25Retriever
+
+redis_cache = redis.Redis(host="localhost", port=6379, db=0)
 
 
-class PreProcess:
-    def __init__(self):
-        self.preprocess_pipeline = Pipeline()
-        self.document_store = InMemoryDocumentStore()
-        self.file_type_router = FileTypeRouter(mime_types=["application/pdf"])
-        self.pdf_converter = PyPDFToDocument()
-        self.document_joiner = DocumentJoiner()
-        self.document_cleaner = DocumentCleaner()
-        self.document_splitter = DocumentSplitter(split_by="page")
-        self.doc_embedder = SentenceTransformersDocumentEmbedder(
-            model="sentence-transformers/all-MiniLM-L6-v2"
-        )
-        self.doc_writer = DocumentWriter(self.document_store)
-        self.retriever = None
+class DocumentStore:
+    def __init__(self, filename):
+        self.filename = filename
+        self.document_store = InMemoryDocumentStore(index=filename)
+        self.start_time = time.time()
+        self.check_interval = 30  # Check every 30s
+        # # Init a timer
+        self._start_timer()
 
-    def init(self):
-        self.preprocess_pipeline.add_component(
-            instance=self.file_type_router, name="file_type_router"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.pdf_converter, name="pypdf_converter"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.document_joiner, name="document_joiner"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.document_cleaner, name="document_cleaner"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.document_splitter, name="document_splitter"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.doc_embedder, name="document_embedder"
-        )
-        self.preprocess_pipeline.add_component(
-            instance=self.doc_writer, name="document_writer"
-        )
-        self.preprocess_pipeline.connect(
-            "file_type_router.application/pdf", "pypdf_converter.sources"
-        )
-        self.preprocess_pipeline.connect("pypdf_converter", "document_joiner")
-        self.preprocess_pipeline.connect("document_joiner", "document_cleaner")
-        self.preprocess_pipeline.connect("document_cleaner", "document_splitter")
-        self.preprocess_pipeline.connect("document_splitter", "document_embedder")
-        self.preprocess_pipeline.connect("document_embedder", "document_writer")
+    def get_store(self):
+        return self.document_store
 
-    def run_preprocess(self, doc_path):
-        doc_path = Path(doc_path)
-        self.preprocess_pipeline.run(
-            {"file_type_router": {"sources": [doc_path]}},
-            include_outputs_from=["document_splitter"],
+    def _start_timer(self):
+        # Periodically check if 10 minutes have passed at self.check_interval
+        timer = threading.Timer(self.check_interval, self._check_time)
+        timer.start()
+
+    def _check_time(self):
+        # Calculate the time difference
+        elapsed_time = time.time() - self.start_time
+        if elapsed_time > 2 * 60:  # 10 mintues
+            self.delete()
+        else:
+            self._start_timer()
+
+    def delete(self):
+        ids = redis_cache.lrange("document_id", 0, -1)
+        ids = [i_d.decode("utf-8") for i_d in ids]
+        logging.info(f"Over 2 mins, deleting {len(ids)} documents from {self.filename}")
+        self.document_store.delete_documents(ids)
+        self.document_store.delete_documents(["agent_cache"])
+        delete_pipe = redis_cache.pipeline()
+        delete_pipe.set("document_store", 0)
+        delete_pipe.delete("filename")
+        delete_pipe.delete("document_id")
+        delete_pipe.execute()
+        remaining = self.document_store.count_documents()
+        logging.info(f"Deleted, {remaining} docuemnts remained from document store")
+
+
+class Converter:
+    def __init__(self, buf, filename, document_store):
+        self.buf = buf
+        self.filename = filename
+        self.document_store = document_store
+
+    def convert(self):
+        doc = DocumentStream(name=self.filename, stream=self.buf)
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.do_ocr = False
+        pipeline_options.do_table_structure = True
+        pipeline_options.table_structure_options.do_cell_matching = True
+        doc_converter = DocumentConverter(
+            allowed_formats=[
+                InputFormat.PDF,
+                InputFormat.DOCX,
+                InputFormat.PPTX,
+            ],
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
+                InputFormat.DOCX: WordFormatOption(pipeline_cls=SimplePipeline),
+                InputFormat.PPTX: PowerpointFormatOption(pipeline_cls=SimplePipeline),
+            },
         )
-        self.retriever = InMemoryEmbeddingRetriever(self.document_store)
-        return self.retriever
+        convert_doc: ConversionResult = doc_converter.convert(doc)
+        convert_doc = convert_doc.document
+
+        chunks = list(HierarchicalChunker().chunk(convert_doc))
+        documents = []
+        ids = []
+        for chunk in chunks:
+            chunk_id = hashlib.sha256((chunk.text).encode("utf-8")).hexdigest()
+            documents.append(Document(content=chunk.text, id=chunk_id))
+            ids.append(chunk_id)
+        self.document_store.write_documents(
+            documents=documents, policy=DuplicatePolicy.SKIP
+        )
+        return ids
 
 
 def extract_questions(context, num, generated_content):
@@ -123,9 +173,10 @@ def extract_questions(context, num, generated_content):
 
 
 class Agent_stage1:
-    def __init__(self, retriever, model, template):
+    def __init__(self, model, template, filename):
         # Openai API Key
-        self.retriever = retriever
+        self.document_store = InMemoryDocumentStore(index=filename)
+        self.retriever = InMemoryBM25Retriever(document_store=self.document_store)
         self.api_key = os.environ["OPENAI_API_KEY"]
         self.rag_pipeline = Pipeline()
         self.tracer = LangfuseConnector("Basic RAG Pipeline")
@@ -142,9 +193,9 @@ class Agent_stage1:
         # else:
         #     self.api_key = os.getenv("TOGETHER_API_KEY")
         #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
-        self.text_embedder = SentenceTransformersTextEmbedder(
-            model="sentence-transformers/all-MiniLM-L6-v2"
-        )
+        # self.text_embedder = SentenceTransformersTextEmbedder(
+        #     model="sentence-transformers/all-MiniLM-L6-v2"
+        # )
         self.template = template
         self.prompt_builder = PromptBuilder(template=self.template)
         self.answer_builder = AnswerBuilder()
@@ -152,16 +203,16 @@ class Agent_stage1:
     def init(self):
         # Add components to your pipeline
         self.rag_pipeline.add_component("tracer", self.tracer)
-        self.rag_pipeline.add_component("text_embedder", self.text_embedder)
+        # self.rag_pipeline.add_component("text_embedder", self.text_embedder)
         self.rag_pipeline.add_component("retriever", self.retriever)
         self.rag_pipeline.add_component("prompt_builder", self.prompt_builder)
         self.rag_pipeline.add_component("llm", self.generator)
         self.rag_pipeline.add_component("answer_builder", self.answer_builder)
 
         # Now, connect the components to each other
-        self.rag_pipeline.connect(
-            "text_embedder.embedding", "retriever.query_embedding"
-        )
+        # self.rag_pipeline.connect(
+        #     "text_embedder.embedding", "retriever.query_embedding"
+        # )
         self.rag_pipeline.connect("retriever", "prompt_builder.documents")
         self.rag_pipeline.connect("prompt_builder", "llm")
         self.rag_pipeline.connect("llm.replies", "answer_builder.replies")
@@ -173,13 +224,15 @@ class Agent_stage1:
         #         generation_kwargs = {"max_tokens": 4096}
         response = self.rag_pipeline.run(
             {
-                "text_embedder": {"text": question},
+                "retriever": {"query": question},
+                # "text_embedder": {"text": question},
                 "prompt_builder": {"question": question},
                 #             "llm": {"generation_kwargs": generation_kwargs},
                 "answer_builder": {"query": question},
             }
         )
         return response
+
 
 # class LiteLLMComponent(BaseComponent):
 #     def __init__(self, api_key, model_name):
@@ -286,19 +339,20 @@ class Agent_stage1:
 #         return response
 
 
-
 class Agent_stage2:
-    def __init__(self, retriever, model, template):
+    def __init__(self, agent_one_content, model, template, filename):
         # Openai API Key
-        self.document_store = InMemoryDocumentStore()
+        self.document_store = InMemoryDocumentStore(index=filename)
         self.documents = [
             Document(
-                content=retriever,
+                content=agent_one_content,
                 meta={"source": "Generated Content"},
-                id="generated_1",
+                id="agent_cache",
             )
         ]
-        self.document_store.write_documents(documents=self.documents)
+        self.document_store.write_documents(
+            documents=self.documents, policy=DuplicatePolicy.SKIP
+        )
         self.retriever = InMemoryBM25Retriever(document_store=self.document_store)
         self.api_key = os.environ["OPENAI_API_KEY"]
         self.rag_pipeline = Pipeline()
