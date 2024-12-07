@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@apollo/client'
+import { useQuery, useMutation, ApolloError } from '@apollo/client'
 import Loader from '@klicker-uzh/shared-components/src/Loader'
 import { GetStaticPropsContext } from 'next'
 import { useTranslations } from 'next-intl'
@@ -35,7 +35,7 @@ export default function Home() {
   
     const [selectedType, setSelectedType] = useState<string>();
     const [selectedModel,setSelectedModel] = useState<string>();
-    const [numQuestions, setNumQuestions] = useState<string>('2');
+    const [numQuestions, setNumQuestions] = useState<string>();
     const [difficultyLevel, setDifficultyLevel] = useState<string>();
     const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
     const [questionsGenerated, setQuestionsGenerated] = useState(false);
@@ -46,6 +46,9 @@ export default function Home() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [activeTab, setActiveTab] = useState<'generating' | 'history'>('generating');
     const [currentPage, setCurrentPage] = useState<number>(1);
+    const [generateError, setGenerateError] = useState<string | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+
     const itemsPerPage = 10; // number of question displayed per page
 
     const [generatedQuestion] = useMutation(GenerateQuestionsApiDocument);
@@ -64,12 +67,18 @@ export default function Home() {
 
     const { loading: loadingCount, error: errorCount, data: dataCount, refetch: refetchCount } = useQuery(GetGeneratedQuestionsCountDocument);
 
-    // const { data: dataMaxId } = useQuery(GetHistoryGeneratedQuestionsDocument, {
-    //     variables: {
-    //         limit: 1, 
-    //         offset: 0, 
-    //     },
-    // });
+    const validateSelections = () => {
+        const errors: string[] = [];
+        if (!selectedType) errors.push(t('manage.aiRelate.noTypeError'));
+        if (!selectedModel) errors.push(t('manage.aiRelate.noModelError'));
+        if (!selectedLanguage) errors.push(t('manage.aiRelate.noLanguageError'));
+        if (!difficultyLevel) errors.push(t('manage.aiRelate.noDifficultyError'));
+        if (!numQuestions) errors.push(t('manage.aiRelate.noNumQError'));
+        if (!selectedFile) errors.push(t('manage.aiRelate.noFileSelected'))
+    
+        return errors;
+    };
+    
     
     // Calculate total pages
     const totalItems = dataCount?.getGeneratedQuestionsCount || 0;
@@ -92,15 +101,16 @@ export default function Home() {
 
     // Handle the click event for "Generate Question" button
     const handleGenerateQuestions = async () => {
+        const validationErrors = validateSelections();
+        if (validationErrors.length > 0) {
+            setGenerateError(validationErrors.join(', ')); 
+            setQuestionsGenerated(false);
+            return; // Stop calling API
+        }
         setIsGenerating(true); 
-        // try {
-        //     const response = await fetch('http://localhost:8000/generate', {
-        //         method: 'POST',
-        //         headers: {
-        //             'Content-Type': 'application/json',
-        //         },
-        //         body: JSON.stringify({ limit: numQuestions, language: selectedLanguage, type: selectedType, difficulty: difficultyLevel,model:selectedModel }),  // 发送生成问题的数量
-        //     });
+        setGenerateError(null);
+        setQuestions([]); //clear old data
+
         try {
             const response = await generatedQuestion({
                     variables: {
@@ -124,7 +134,24 @@ export default function Home() {
             }   
             
         } catch (error) {
-            console.error('Error fetching questions:', error);
+            console.error('Error generating questions:', error);
+            if (error instanceof ApolloError) {
+                const graphQLErrors = error.graphQLErrors.map((e) => e.message).join(', ');
+                const networkError = error.networkError?.message;
+        
+                // Display GraphQL error
+                if (graphQLErrors) {
+                    setGenerateError(`${graphQLErrors}, Please retry`);
+                } else if (networkError) {
+                    setGenerateError(`${networkError}.Please retry`);
+                } else {
+                    setGenerateError(t('manage.aiRelate.unexpectedError'));
+                }
+            } else {
+                // Display not  ApolloError
+                setGenerateError(`${error instanceof Error ? error.message : 'An unexpected error occurred'}. Please retry.`);
+            }
+            setQuestionsGenerated(false);
         } finally {
             setIsGenerating(false); 
         }
@@ -139,8 +166,12 @@ export default function Home() {
 
     const handleFileUpload = async () => {
         if (!selectedFile) {
+            setUploadError(t('manage.aiRelate.noFileSelected')); 
             return;
         }
+
+        setUploadError(null);
+        setUploadSuccess(null); 
 
         const formData = new FormData();
         formData.append('file', selectedFile);
@@ -154,10 +185,16 @@ export default function Home() {
             if (response.ok) {
                 console.log('File successfully uploaded');
                 setUploadSuccess(true);
-
+            } else {
+                const errorMessage = await response.text(); 
+                setUploadError(errorMessage || t('manage.aiRelate.fileFail'));
+                setUploadSuccess(false);
             }
         } catch (error) {
             console.error('Error uploading file:', error);
+            setUploadError(
+                `${error instanceof Error ? error.message : 'An unexpected error occurred'}. Please retry.`
+            );
             setUploadSuccess(false);
 
         }
@@ -234,12 +271,24 @@ export default function Home() {
                         >
                             <Button.Label>{t('manage.aiRelate.uploadFile')}</Button.Label>
                         </Button>
+
                         {/*Notification of file upload status*/} 
-                        {uploadSuccess === true && (
-                            <div className="mt-2 text-green-600 font-medium">{t('manage.aiRelate.fileSuccess')}</div>
+                        {uploadError && (
+                            <Label
+                                label={`${t('shared.generic.error')}: ${uploadError}`}
+                                className={{
+                                    root: 'block mb-2 text-sm font-semibold text-red-600',
+                                }}
+                            />
                         )}
-                        {uploadSuccess === false && (
-                            <div className="mt-2 text-red-600 font-medium">{t('manage.aiRelate.fileFail')}</div>
+
+                        {uploadSuccess === true && (
+                            <Label
+                                label={t('manage.aiRelate.fileSuccess')}
+                                className={{
+                                    root: 'block mb-2 text-sm font-semibold text-green-600',
+                                }}
+                            />
                         )}
 
                     </div>
@@ -490,7 +539,15 @@ export default function Home() {
                     {activeTab === 'generating' && (
                         isGenerating ? (
                             <Loader />
-                        ) : errorQuestions ? (
+                        ) :generateError ? (
+                            <Label
+                                label={`${t('shared.generic.error')}: ${generateError}`}
+                                className={{
+                                        root: 'block mb-2 text-sm font-semibold text-red-600',
+                                }}
+                            />                            
+                        )
+                        : errorQuestions ? (
                             <div>{t('shared.generic.error')}: {errorQuestions.message}</div>
                         ) : questionsGenerated && !loadingQuestions ? (
                           <QuestionList
