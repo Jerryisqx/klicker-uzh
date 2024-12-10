@@ -70,6 +70,10 @@ from haystack_integrations.components.generators.google_ai import (
     GoogleAIGeminiGenerator,
 )
 
+# from haystack_experimental.chat_message_stores.in_memory import InMemoryChatMessageStore
+# from haystack_experimental.components.retrievers import ChatMessageRetriever
+# from haystack_experimental.components.writers import ChatMessageWriter
+
 redis_cache = redis.Redis(host="localhost", port=6379, db=0)
 
 
@@ -101,11 +105,12 @@ class DocumentStore:
     def delete(self):
         ids = redis_cache.lrange("document_id", 0, -1)
         ids = [i_d.decode("utf-8") for i_d in ids]
-        logging.info(f"Deleting {len(ids)} documents from {self.filename.decode("utf-8")}")
+        logging.info(f"Deleting {len(ids)} documents from {self.filename}")
         self.document_store.delete_documents(ids)
         self.document_store.delete_documents(["agent_cache"])
         delete_pipe = redis_cache.pipeline()
         delete_pipe.set("document_store", 0)
+        delete_pipe.set("agent_status", 0)
         delete_pipe.delete("filename")
         delete_pipe.delete("document_id")
         delete_pipe.execute()
@@ -173,20 +178,9 @@ def extract_questions(context, num, generated_content):
 
 
 class Agent_stage1:
-    def __init__(self, model, template, filename):
+    def __init__(self, template):
         # Openai API Key
-        self.document_store = InMemoryDocumentStore(index=filename)
-        self.retriever = InMemoryBM25Retriever(document_store=self.document_store)
-        self.api_key = os.environ["OPENAI_API_KEY"]
-        self.rag_pipeline = Pipeline()
-        self.tracer = LangfuseConnector("Basic RAG Pipeline")
-        if model == "OpenAI":
-            # load_openai_api_key()
-            self.api_key = os.getenv("OPENAI_API_KEY")
-            self.generator = OpenAIGenerator(model="gpt-4o-2024-11-20")
-        else:
-            self.api_key = os.getenv("ANTHROPIC_API_KEY")
-            self.generator = AnthropicGenerator(model="claude-3-haiku-20240307")
+        # self.api_key = os.environ["OPENAI_API_KEY"]
         # elif model=='Llama':
         #     self.api_key = os.getenv("LLAMA_API_KEY")
         #     self.generator = HuggingFaceAPIGenerator(api_type="text_generation_inference", api_params={"model_name": "meta-llama/Meta-Llama-3-8B"})
@@ -197,12 +191,24 @@ class Agent_stage1:
         #     model="sentence-transformers/all-MiniLM-L6-v2"
         # )
         self.template = template
+
+    def init(self, filename, model):
+        # Add components to your pipeline
+        # self.tracer = LangfuseConnector("Basic RAG Pipeline")
+        self.document_store = InMemoryDocumentStore(index=filename)
+        self.retriever = InMemoryBM25Retriever(document_store=self.document_store)
+        if model == "OpenAI":
+            # load_openai_api_key()
+            self.api_key = os.getenv("OPENAI_API_KEY")
+            self.generator = OpenAIGenerator(model="gpt-4o-2024-11-20")
+        else:
+            self.api_key = os.getenv("ANTHROPIC_API_KEY")
+            self.generator = AnthropicGenerator(model="claude-3-haiku-20240307")
         self.prompt_builder = PromptBuilder(template=self.template)
         self.answer_builder = AnswerBuilder()
+        self.rag_pipeline = Pipeline()
 
-    def init(self):
-        # Add components to your pipeline
-        self.rag_pipeline.add_component("tracer", self.tracer)
+        # self.rag_pipeline.add_component("tracer", self.tracer)
         # self.rag_pipeline.add_component("text_embedder", self.text_embedder)
         self.rag_pipeline.add_component("retriever", self.retriever)
         self.rag_pipeline.add_component("prompt_builder", self.prompt_builder)
@@ -340,8 +346,18 @@ class Agent_stage1:
 
 
 class Agent_stage2:
-    def __init__(self, agent_one_content, model, template, filename):
+    def __init__(self, template):
+        # self.api_key = os.environ["OPENAI_API_KEY"]
+
+        self.template = template
+        # Memory components
+        # self.memory_store = InMemoryChatMessageStore()
+        # self.memory_retriever = ChatMessageRetriever(memory_store)
+        # self.memory_writer = ChatMessageWriter(memory_store)
+
+    def init(self, filename, agent_one_content, model):
         # Openai API Key
+        self.rag_pipeline = Pipeline()
         self.document_store = InMemoryDocumentStore(index=filename)
         self.documents = [
             Document(
@@ -354,9 +370,6 @@ class Agent_stage2:
             documents=self.documents, policy=DuplicatePolicy.SKIP
         )
         self.retriever = InMemoryBM25Retriever(document_store=self.document_store)
-        self.api_key = os.environ["OPENAI_API_KEY"]
-        self.rag_pipeline = Pipeline()
-        self.tracer = LangfuseConnector("Basic RAG Pipeline")
         if model == "OpenAI":
             # load_openai_api_key()
             self.api_key = os.getenv("OPENAI_API_KEY")
@@ -370,14 +383,13 @@ class Agent_stage2:
         # else:
         #     self.api_key = os.getenv("TOGETHER_API_KEY")
         #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
+        # self.tracer = LangfuseConnector("Basic RAG Pipeline")
         self.generated_content = ""
-        self.template = template
         self.prompt_builder = PromptBuilder(template=self.template)
         self.answer_builder = AnswerBuilder()
 
-    def init(self):
         # Add components to your pipeline
-        self.rag_pipeline.add_component("tracer", self.tracer)
+        # self.rag_pipeline.add_component("tracer", self.tracer)
         self.rag_pipeline.add_component("retriever", self.retriever)
         self.rag_pipeline.add_component("prompt_builder", self.prompt_builder)
         self.rag_pipeline.add_component("llm", self.generator)

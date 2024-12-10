@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, field_validator
+from starlette.middleware.sessions import SessionMiddleware
+from pydantic import BaseModel, Field
 from typing import List, Literal
 import random
 import logging
@@ -45,14 +46,14 @@ class GenerateQuestionsRequest(BaseModel):
     difficulty: str
     model: str
 
-    @field_validator("language")
-    def validate_language(cls, value):
-        allowed_languages = {"English", "German"}
-        if value not in allowed_languages:
-            raise ValueError(
-                f"Invalid Languages: {value}, Language must be one of {allowed_languages}"
-            )
-        return value
+    # @field_validator("language")
+    # def validate_language(cls, value):
+    #     allowed_languages = {"English", "German"}
+    #     if value not in allowed_languages:
+    #         raise ValueError(
+    #             f"Invalid Languages: {value}, Language must be one of {allowed_languages}"
+    #         )
+    #     return value
 
     # @field_validator("type")
     # def validate_type(cls, value):
@@ -153,7 +154,7 @@ async def insert_questions_to_db(questions):
         raise
 
 
-@app.post("/generate")
+@app.post("/generate/")
 async def generate_questions(request: GenerateQuestionsRequest):
     questions_number = request.limit
     language = request.language
@@ -166,12 +167,12 @@ async def generate_questions(request: GenerateQuestionsRequest):
 
     logging.info("Starting the question generation process...")
 
-    prompt_path1 = os.path.join(os.getcwd(), "stage1.txt")
-    prompt_path2 = os.path.join(os.getcwd(), "stage2.txt")
-    with open(prompt_path1, "r", encoding="utf-8") as file:
-        stage1 = file.read()
-    with open(prompt_path2, "r", encoding="utf-8") as file:
-        stage2 = file.read()
+    # prompt_path1 = os.path.join(os.getcwd(), "stage1.txt")
+    # prompt_path2 = os.path.join(os.getcwd(), "stage2.txt")
+    # with open(prompt_path1, "r", encoding="utf-8") as file:
+    #     stage1 = file.read()
+    # with open(prompt_path2, "r", encoding="utf-8") as file:
+    #     stage2 = file.read()
 
     MAX_RETRIES = 3
     retry_count = 0
@@ -180,15 +181,15 @@ async def generate_questions(request: GenerateQuestionsRequest):
     if redis_cache.exists("document_store") == 0:
         logging.error("Cached File are deleted, please upload new file again!")
         return {"error": "Cannot find document store."}
-    else:
+    elif int(redis_cache.get("agent_status")) == 0:
         filename = redis_cache.get("filename").decode("utf-8")
         logging.info("Initializing OpenAI generator and retriever...")
         while generated_text1 is None and retry_count < MAX_RETRIES:
             try:
-                agent1 = Agent_stage1(model=model, template=stage1, filename=filename)
-                agent1.init()
+                # agent1 = Agent_stage1(model=model, template=stage1, filename=filename)
+                app.state.agent1.init(filename, model)
                 logging.info(f"Running Agent_stage1 (attempt {retry_count + 1})...")
-                response1 = agent1.run_agent()
+                response1 = app.state.agent1.run_agent()
                 generated_text1 = response1["answer_builder"]["answers"][0].data
                 if not generated_text1:  # 检查生成结果是否为空
                     raise ValueError("Generated text1 is empty.")
@@ -202,13 +203,10 @@ async def generate_questions(request: GenerateQuestionsRequest):
                 else:
                     logging.error("Maximum retries reached for Agent_stage1.")
                     raise  # 如果达到最大重试次数，抛出异常
-        agent2 = Agent_stage2(
-            agent_one_content=generated_text1,
-            model=model,
-            template=stage2,
-            filename=filename,
-        )
-        agent2.init()
+        app.state.agent2.init(filename, generated_text1, model)
+        redis_cache.set("agent_status", 1)
+    else:
+        logging.info("Agent for document already exists")
 
     generated_text2 = None
     # Retry logic
@@ -222,7 +220,7 @@ async def generate_questions(request: GenerateQuestionsRequest):
                 # If generate error,restart agent
                 logging.info(f"Generating response (attempt {retry_count + 1})...")
                 try:
-                    response2 = agent2.run_agent(
+                    response2 = app.state.agent2.run_agent(
                         questions_number, language, difficulty, type
                     )
                     generated_text2 = response2["answer_builder"]["answers"][0].data
@@ -253,10 +251,11 @@ async def generate_questions(request: GenerateQuestionsRequest):
             # restart agent
             try:
                 if True:
-                    agent2 = Agent_stage2(
-                        retriever=generated_text1, template=stage2, filename=filename
-                    )
-                    agent2.init()
+                    # agent2 = Agent_stage2(
+                    #     retriever=generated_text1, template=stage2, filename=filename
+                    # )
+                    app.state.agent2.init(filename, generated_text1, model)
+                    redis_cache.set("agent_status", 1)
                 else:
                     continue
             except Exception as init_error:
@@ -273,18 +272,28 @@ async def generate_questions(request: GenerateQuestionsRequest):
 
 
 # Receive PDF file and save it into /tmp folder
-@app.post("/upload")
+@app.post("/upload/")
 async def upload_pdf(file: UploadFile = File(...)):
     input_bytes = await file.read()
     filename = str(file.filename)
     buf = BytesIO(input_bytes)
 
-    if redis_cache.exists("filename") == 1 and redis_cache.get("filename").decode("utf-8") == filename:
+    if input_bytes == None:
+        logging.error("No upload file found.")
+        return {"message": "Upload not successful"}
+
+    if (
+        redis_cache.exists("filename") == 1
+        and redis_cache.get("filename").decode("utf-8") == filename
+    ):
         document_store = DocumentStore(filename).get_store()
         if document_store.count_documents() != 0:
             logging.info("Uploaded file in cache, using cached data ...")
             return {"message": "Upload successful"}
-    elif redis_cache.exists("filename") == 1 and redis_cache.get("filename").decode("utf-8") != filename:
+    elif (
+        redis_cache.exists("filename") == 1
+        and redis_cache.get("filename").decode("utf-8") != filename
+    ):
         logging.info("Found unused cached memory, deleting first ...")
         DocumentStore(redis_cache.get("filename")).delete()
 
@@ -295,8 +304,23 @@ async def upload_pdf(file: UploadFile = File(...)):
     upload_pipe = redis_cache.pipeline()
     upload_pipe.set("filename", filename)
     upload_pipe.set("document_store", 1)
+    upload_pipe.set("agent_status", 0)
     for i_d in ids:
         upload_pipe.rpush("document_id", i_d)
     upload_pipe.execute()
     logging.info("Upload successfully")
     return {"message": "Upload successful"}
+
+
+@app.on_event("startup")
+async def startup_event():
+    # Init Agent
+    prompt_path1 = os.path.join(os.getcwd(), "stage1.txt")
+    prompt_path2 = os.path.join(os.getcwd(), "stage2.txt")
+    with open(prompt_path1, "r", encoding="utf-8") as file:
+        stage1 = file.read()
+    with open(prompt_path2, "r", encoding="utf-8") as file:
+        stage2 = file.read()
+    app.state.agent1 = Agent_stage1(template=stage1)
+    app.state.agent2 = Agent_stage2(template=stage2)
+    logging.info("Agent Instance created.")
