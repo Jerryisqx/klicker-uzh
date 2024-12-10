@@ -15287,6 +15287,22 @@
             "description": null,
             "args": [
               {
+                "name": "ambiguity",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
                 "name": "difficultyRate",
                 "description": null,
                 "type": {
@@ -15303,7 +15319,7 @@
                 "deprecationReason": null
               },
               {
-                "name": "helpfulness",
+                "name": "factualCorrectness",
                 "description": null,
                 "type": {
                   "kind": "NON_NULL",
@@ -21836,6 +21852,22 @@
         "isOneOf": null,
         "fields": [
           {
+            "name": "ambiguity",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Int",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "difficultyRate",
             "description": null,
             "args": [],
@@ -21852,7 +21884,7 @@
             "deprecationReason": null
           },
           {
-            "name": "helpfulness",
+            "name": "factualCorrectness",
             "description": null,
             "args": [],
             "type": {

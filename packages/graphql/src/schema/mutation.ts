@@ -582,10 +582,12 @@ export const Mutation = builder.mutationType({
         type: RateQuestion,
         args: {
           id: t.arg.int({ required: true }),
-          helpfulness: t.arg.int({ required: true }),
+          factualCorrectness: t.arg.int({ required: true }),
           difficultyRate: t.arg.int({ required: true }),
           typeRate: t.arg.int({ required: true }),
           relevance: t.arg.int({ required: true }),
+          ambiguity: t.arg.int({ required: true }),
+
         },
         resolve: (_, args, ctx) => {
           return QuestionService.rateQuestion(args, ctx);

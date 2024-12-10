@@ -165,12 +165,13 @@ export async function getHistoryGeneratedQuestions(
 
 //manipulate the rate of each generated questions
 export async function rateQuestion(
-  { id, helpfulness, difficultyRate, typeRate, relevance}: {
+  { id, factualCorrectness, difficultyRate, typeRate, relevance,ambiguity}: {
     id: number;
-    helpfulness: number;
+    factualCorrectness: number;
     difficultyRate: number;
     typeRate: number;
     relevance: number;
+    ambiguity: number;
   },
   ctx: ContextWithUser
 ) {
@@ -179,10 +180,11 @@ export async function rateQuestion(
       id: id,
     },
     data: {
-      helpfulness: helpfulness,
+      factualCorrectness: factualCorrectness,
       difficultyRate: difficultyRate,
       typeRate: typeRate,
       relevance: relevance,
+      ambiguity: ambiguity,
     },
   });
 }

@@ -1,9 +1,10 @@
-mutation RateQuestion($id: Int!, $helpfulness: Int!, $difficultyRate: Int!, $typeRate: Int!, $relevance: Int!) {
-    rateQuestion(id: $id, helpfulness: $helpfulness, difficultyRate: $difficultyRate, typeRate: $typeRate, relevance: $relevance) {
+mutation RateQuestion($id: Int!, $factualCorrectness: Int!, $difficultyRate: Int!, $typeRate: Int!, $relevance: Int!, $ambiguity: Int!) {
+    rateQuestion(id: $id, factualCorrectness: $factualCorrectness, difficultyRate: $difficultyRate, typeRate: $typeRate, relevance: $relevance,  ambiguity: $ambiguity) {
       id
-      helpfulness
+      factualCorrectness
       difficultyRate
       typeRate
       relevance
+      ambiguity
     }
 }

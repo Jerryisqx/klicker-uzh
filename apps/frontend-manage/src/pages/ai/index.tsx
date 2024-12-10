@@ -167,6 +167,7 @@ export default function Home() {
     const handleFileUpload = async () => {
         if (!selectedFile) {
             setUploadError(t('manage.aiRelate.noFileSelected')); 
+            setSelectedFile(null);
             return;
         }
 
@@ -282,7 +283,7 @@ export default function Home() {
                             />
                         )}
 
-                        {uploadSuccess === true && (
+                        {uploadSuccess === true && !uploadError && (
                             <Label
                                 label={t('manage.aiRelate.fileSuccess')}
                                 className={{

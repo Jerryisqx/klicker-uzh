@@ -12,10 +12,11 @@ interface RatingModalProps {
 }
 
 function RatingModal({ isOpen, handleSetIsOpen, questionId, handleRatingCompleted}: RatingModalProps): React.ReactElement {
-  const [helpfulness, setHelpfulness] = useState(3);
+  const [factualCorrectness, setFactualCorrect] = useState(3);
   const [difficultyRate, setDifficultyRate] = useState(3);
   const [typeRate, setTypeRate] = useState(3);
   const [relevance, setRelevance] = useState(3);
+  const [ambiguity, setAmiguity] = useState(3);
 
   const [rateQuestion, { loading }] = useMutation(RateQuestionDocument);
 
@@ -31,10 +32,11 @@ function RatingModal({ isOpen, handleSetIsOpen, questionId, handleRatingComplete
       await rateQuestion({
         variables: {
           id: questionId,
-          helpfulness,
+          factualCorrectness,
           difficultyRate,
           typeRate,
           relevance,
+          ambiguity,
         },
       });
       console.log('Rating submitted successfully');
@@ -57,12 +59,12 @@ function RatingModal({ isOpen, handleSetIsOpen, questionId, handleRatingComplete
 
       <div className="mb-4">
         <Label
-          label={t('manage.aiRelate.helpEval')}
+          label={t('manage.aiRelate.factEval')}
             className={{
             root: 'block mb-2 text-sm font-semibold text-gray-700',
             }}
         />
-        <div className = "flex items-center space-x-4" onChange={(e) => setHelpfulness(Number((e.target as HTMLInputElement).value))}>
+        <div className = "flex items-center space-x-4" onChange={(e) => setFactualCorrect(Number((e.target as HTMLInputElement).value))}>
         {[
             { value: 1, label:  t('manage.aiRelate.strongDisagree')},
             { value: 2, label: t('manage.aiRelate.disagree')},
@@ -74,7 +76,7 @@ function RatingModal({ isOpen, handleSetIsOpen, questionId, handleRatingComplete
                 <input
                     type="radio"
                     value={value}
-                    checked={helpfulness === value}
+                    checked={factualCorrectness === value}
                     className="mr-1"
                 />
                 <span>{label}</span>
@@ -159,6 +161,34 @@ function RatingModal({ isOpen, handleSetIsOpen, questionId, handleRatingComplete
                     type="radio"
                     value={value}
                     checked={relevance === value}
+                    className="mr-1"
+                />
+                <span>{label}</span>
+            </label>
+        ))}
+        </div>
+      </div>
+
+      <div className="mb-4">
+      <Label
+          label={t('manage.aiRelate.ambiEval')}
+            className={{
+            root: 'block mb-2 text-sm font-semibold text-gray-700',
+            }}
+        />
+        <div className = "flex items-center space-x-4" onChange={(e) => setAmiguity(Number((e.target as HTMLInputElement).value))}>
+        {[
+            { value: 1, label:  t('manage.aiRelate.strongDisagree')},
+            { value: 2, label: t('manage.aiRelate.disagree')},
+            { value: 3, label: t('manage.aiRelate.neutral')},
+            { value: 4, label: t('manage.aiRelate.agree')},
+            { value: 5, label: t('manage.aiRelate.strongAgree')},
+        ].map(({ value, label }) => (
+            <label key={value} className="flex items-center space-x-2">
+                <input
+                    type="radio"
+                    value={value}
+                    checked={ambiguity === value}
                     className="mr-1"
                 />
                 <span>{label}</span>

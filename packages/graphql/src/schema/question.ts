@@ -383,19 +383,21 @@ export const Element = builder.unionType('Element', {
 //Add new for manipulate the user rate of generated question only
 export interface IRateQuestion {
   id: number;
-  helpfulness: number;
+  factualCorrectness: number;
   difficultyRate: number;
   typeRate: number;
   relevance: number;
+  ambiguity: number;
 }
 export const RateQuestionRef = builder.objectRef<IRateQuestion>('RateQuestion');
 export const RateQuestion = RateQuestionRef.implement({
   fields: (t) => ({
     id: t.exposeInt('id'),
-    helpfulness: t.exposeInt('helpfulness'),
+    factualCorrectness: t.exposeInt('factualCorrectness'),
     difficultyRate: t.exposeInt('difficultyRate'),
     typeRate: t.exposeInt('typeRate'),
     relevance: t.exposeInt('relevance'),
+    ambiguity: t.exposeInt('ambiguity'),
   }),
 });
 
