@@ -240,7 +240,6 @@ class Agent_stage1:
         return response
 
 
-
 class Agent_stage2:
     def __init__(self, template):
         # self.api_key = os.environ["OPENAI_API_KEY"]

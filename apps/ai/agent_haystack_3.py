@@ -8,10 +8,12 @@ import os
 import subprocess
 import re
 import json
+
 # import litellm
 # from litellm import completion
 from litellm import LiteLLM
 from haystack import component
+
 # OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 # LLAMA_API_KEY= os.getenv("LLAMA_API_KEY")
@@ -61,22 +63,18 @@ class LiteLLMComponent:
         self.models = {
             "OpenAI": {
                 "api_key_env": "OPENAI_API_KEY",
-                "litellm_params": {
-                    "model": "gpt-4o-2024-11-20"  # Model for OpenAI
-                }
+                "litellm_params": {"model": "gpt-4o-2024-11-20"},  # Model for OpenAI
             },
             "Anthropic": {
                 "api_key_env": "ANTHROPIC_API_KEY",
                 "litellm_params": {
                     "model": "claude-3-haiku-20240307"  # Model for Anthropic
-                }
+                },
             },
             "Llama": {
                 "api_key_env": "LLAMA_API_KEY",
-                "litellm_params": {
-                    "model": "llama-2-13b-chat"  # Model for Llama
-                }
-            }
+                "litellm_params": {"model": "llama-2-13b-chat"},  # Model for Llama
+            },
         }
 
     def get_generator(self, model: str):
@@ -87,12 +85,16 @@ class LiteLLMComponent:
         :return: The litellm generator instance.
         """
         if model not in self.models:
-            raise ValueError(f"Model '{model}' not supported. Available models: {list(self.models.keys())}")
+            raise ValueError(
+                f"Model '{model}' not supported. Available models: {list(self.models.keys())}"
+            )
 
         model_config = self.models[model]
         api_key = os.getenv(model_config["api_key_env"])
         if not api_key:
-            raise EnvironmentError(f"API key for {model} not found in environment variable '{model_config['api_key_env']}'.")
+            raise EnvironmentError(
+                f"API key for {model} not found in environment variable '{model_config['api_key_env']}'."
+            )
 
         # Initialize LiteLLM without passing the model parameter to the constructor
         generator = LiteLLM()
@@ -111,7 +113,8 @@ class LiteLLMComponent:
         :return: The litellm generator instance.
         """
         return self.get_generator(model)
-    
+
+
 class PreProcess:
     def __init__(self):
         self.preprocess_pipeline = Pipeline()
@@ -201,7 +204,6 @@ class Agent_stage1:
         # self.api_key = result["api_key"]
         self.generator = self.get_generator()
 
-
         self.text_embedder = SentenceTransformersTextEmbedder(
             model="sentence-transformers/all-MiniLM-L6-v2"
         )
@@ -248,7 +250,6 @@ class Agent_stage1:
         return response
 
 
-
 class Agent_stage2:
     def __init__(self, retriever, model, template):
         # Openai API Key
@@ -271,7 +272,6 @@ class Agent_stage2:
         result = component.run(model=model)
         # self.api_key = result["api_key"]
         self.generator = self.get_generator()
-
 
         self.generated_content = ""
         self.template = template
