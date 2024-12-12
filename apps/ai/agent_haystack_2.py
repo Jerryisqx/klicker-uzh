@@ -97,7 +97,7 @@ class DocumentStore:
     def _check_time(self):
         # Calculate the time difference
         elapsed_time = time.time() - self.start_time
-        if elapsed_time > 2 * 60:  # n mintues (n * 60)
+        if elapsed_time > 30 * 60:  # n mintues (n * 60)
             self.delete()
         else:
             self._start_timer()

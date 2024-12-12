@@ -33,9 +33,9 @@ services:
     networks:
       - klicker
 
-  apiai:
-    image: qingyuleo/aiapi:v5.0.0
-    container_name: apiai
+  ai:
+    image: ghcr.io/jerryisqx/klicker-uzh/ai:v3-ai-dev
+    # container_name: ai
     ports:
       - "8000:8000"
     networks:

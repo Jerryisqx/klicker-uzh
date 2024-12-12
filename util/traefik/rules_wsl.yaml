@@ -42,11 +42,11 @@ http:
         - 'web'
       service: 'func-response-processor'
       
-    apiai:
-      rule: 'Host(`apiai.klicker.com`)'
+    ai:
+      rule: 'Host(`ai.klicker.com`)'
       entrypoints:
         - 'web'
-      service: 'apiai'
+      service: 'ai'
 
   services:
     api:
@@ -84,7 +84,7 @@ http:
         servers:
           - url: 'http://192.168.254.170:7073'
 
-    apiai:
+    ai:
       loadBalancer:
         servers:
           - url: 'http://192.168.254.170:8000'
