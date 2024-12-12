@@ -40,7 +40,7 @@ Step 2: Prioritization and Content Generation
 4. Suggest Suitable Question Types: 
    - Recommend question types based on the topic's complexity and nature:  
      - Single Choice: (only one correct option).  
-     - Multiple Choice: two or more correct options).  
+     - Multiple Choice: (two or more correct options).  
      - Flashcard: (quick recall questions).  
      - Free Text: (open-ended responses).  
      - Numerical: (quantitative answers).  

@@ -83,10 +83,11 @@ model ElementGenerated {
   type   ElementType
   status ElementStatus @default(READY)
 
-  helpfulness Int?
+  factualCorrectness Int?
   typeRate Int?
   difficultyRate Int?
   relevance Int?
+  ambiguity Int?
 
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   ownerId String @db.Uuid

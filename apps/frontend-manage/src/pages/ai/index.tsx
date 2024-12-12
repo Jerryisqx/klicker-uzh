@@ -50,7 +50,8 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [generateError, setGenerateError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
-
+  const [isFileUploaded, setIsFileUploaded] = useState(false);
+  const [fileChanged, setFileChanged] = useState(false)
   const itemsPerPage = 10 // number of question displayed per page
 
   const [generatedQuestion] = useMutation(GenerateQuestionsApiDocument)
@@ -113,12 +114,18 @@ export default function Home() {
 
   // Handle the click event for "Generate Question" button
   const handleGenerateQuestions = async () => {
-    const validationErrors = validateSelections()
-    if (validationErrors.length > 0) {
-      setGenerateError(validationErrors.join(', '))
-      setQuestionsGenerated(false)
-      return // Stop calling API
+    if (!isFileUploaded) {
+        setGenerateError(t('manage.aiRelate.noFileSelected'));
+        setQuestionsGenerated(false);
+        return; // 停止调用 API
     }
+    
+    // const validationErrors = validateSelections()
+    // if (validationErrors.length > 0) {
+    //   setGenerateError(validationErrors.join(', '))
+    //   setQuestionsGenerated(false)
+    //   return // Stop calling API
+    // }
     setIsGenerating(true)
     setGenerateError(null)
     setQuestions([]) //clear old data
@@ -173,16 +180,49 @@ export default function Home() {
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // 清空状态
+    setUploadSuccess(null);
+    setUploadError(null);
+  
     if (event.target.files && event.target.files.length > 0) {
-      setSelectedFile(event.target.files[0])
-      setUploadSuccess(null)
+      const file = event.target.files[0];
+  
+      // 检查是否为相同文件
+      if (selectedFile && selectedFile.name === file.name && selectedFile.size === file.size) {
+        // 文件未更改，但允许重新上传
+        setFileChanged(false);
+        setSelectedFile(file); // 保留相同文件
+        setIsFileUploaded(false); // 重置上传状态，允许重新上传
+      } else {
+        // 文件已更改
+        setSelectedFile(file);
+        setFileChanged(true); // 标记文件已更改
+        setIsFileUploaded(false); // 重置上传状态
+      }
+    } else {
+      // 如果 files 为 null 或为空数组，表示用户未选择文件
+      setSelectedFile(null);
+      setFileChanged(false);
+      setUploadError(t('manage.aiRelate.noFileSelected')); // 提示未选择文件
     }
-  }
+  };
+  
+  // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+
+  //   const fileInput = event.target;
+  //   fileInput.value = ''; // 清空文件输入框，以便用户可以重新选择相同文件
+  //   if (event.target.files && event.target.files.length > 0) {
+  //     setSelectedFile(event.target.files[0])
+  //     setUploadSuccess(null)
+  //   }
+  // }
+  
 
   const handleFileUpload = async () => {
-    if (!selectedFile) {
+    if (!selectedFile || !fileChanged) {
       setUploadError(t('manage.aiRelate.noFileSelected'))
-      setSelectedFile(null)
+      setUploadSuccess(null)
+      setIsFileUploaded(false)
       return
     }
 
@@ -201,10 +241,14 @@ export default function Home() {
       if (response.ok) {
         console.log('File successfully uploaded')
         setUploadSuccess(true)
+        setUploadError(null) // 清除之前的错误信息
+        setIsFileUploaded(true) // 设置文件上传成功标志位
+        setSelectedFile(null)
       } else {
         const errorMessage = await response.text()
         setUploadError(errorMessage || t('manage.aiRelate.fileFail'))
-        setUploadSuccess(false)
+        setUploadSuccess(null)
+        setIsFileUploaded(false)
       }
     } catch (error) {
       console.error('Error uploading file:', error)
@@ -214,6 +258,7 @@ export default function Home() {
       setUploadSuccess(false)
     }
   }
+
 
   const handleNumQuestionChange = (newValue: string) => {
     if (newValue === 'RANDOM') {

@@ -35,7 +35,7 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-redis_cache = redis.Redis(host="localhost", port=6379)
+redis_cache = redis.Redis(host="redis_cache", port=6379)
 
 
 # Define the request model for generating questions

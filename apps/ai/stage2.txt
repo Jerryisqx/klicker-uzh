@@ -22,12 +22,18 @@ Follow the instructions, create the actual questions for each topic following th
          
 3.Questions are distributed across all topics by topic weights, ensuring comprehensive coverage of the uploaded material. Do not generate duplicate or overly similar questions.Here are the questions' stem already generated： {{generated_content}}
                
-4.For math-related content, use LaTeX for formulas in the generated questions and answers.Ensure that:
-       - All LaTeX expressions are properly formatted: inline expressions should be wrapped in \( ... \) and block expressions in \[ ... \].
-       - Any backslashes (\) used in LaTeX commands (like \frac, \sum) are escaped as \\ to ensure JSON compliance.
-       - Any double quotes within the LaTeX expressions should be escaped as \".
-       - The content field should contain a valid LaTeX expression that can be rendered in a LaTeX viewer.
-            
+4.For all math-related content, ensure that LaTeX expressions are formatted for proper front-end rendering:
+       - Make sure inline expressions wrapped in $$...$$ not in \(...\) for inline math and space between formulas and text.
+       - Escape all backslashes (\) as \\ to ensure compatibility with JSON formatting.
+       - Escape all double quotes (") within LaTeX expressions as \\\".
+       - Ensure the generated content is a valid LaTeX expression that can be rendered correctly in a front-end LaTeX viewer MathJax.
+       - Before finalizing the content, check if the LaTeX expression is valid.If there are errors in the LaTeX syntax, correct them to ensure the content is renderable.
+
+5.Add Markdown formatting for improved readability:
+       - Use bold (...) to highlight key terms, variables, or important parts of the question.
+       - Use bullet points (-) or numbered lists for structured content when necessary.
+       - For longer questions, break down the content into clear sections with proper formatting to improve readability.
+       - Ensure the content combines LaTeX and Markdown seamlessly.
 
 Step2
 Check the user's query:

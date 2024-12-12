@@ -34,7 +34,7 @@ services:
       - klicker
 
   apiai:
-    image: qingyuleo/aiapi:v3.0.0
+    image: qingyuleo/aiapi:v5.0.0
     container_name: apiai
     ports:
       - "8000:8000"
@@ -57,6 +57,7 @@ services:
       - TOGETHER_API_KEY
       - LANGFUSE_PUBLIC_KEY
       - LANGFUSE_SECRET_KEY
+      
     command: >
       sh -c "
       cp /app/prisma1/schema/*.prisma /app/prisma/schema/ &&
