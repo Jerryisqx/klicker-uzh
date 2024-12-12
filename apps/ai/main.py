@@ -150,7 +150,7 @@ async def insert_questions_to_db(questions):
                         .split("'explanation':")[-1]
                         if "explanation" in question["options"]
                         else ""
-                    ),
+                    ).replace("\r", "\\r").replace("\n", "\\n"),
                 }
             )
         logging.info(
@@ -198,7 +198,7 @@ async def generate_questions(request: GenerateQuestionsRequest):
                 logging.info(f"Running Agent_stage1 (attempt {retry_count + 1})...")
                 response1 = app.state.agent1.run_agent()
                 generated_text1 = response1["answer_builder"]["answers"][0].data
-                if not generated_text1:  # 检查生成结果是否为空
+                if not generated_text1:  #Test if the result is None
                     raise ValueError("Generated text1 is empty.")
                 else:
                     logging.info(f"Generated text:\n{generated_text1}")
@@ -209,7 +209,7 @@ async def generate_questions(request: GenerateQuestionsRequest):
                     logging.info("Retrying Agent_stage1...")
                 else:
                     logging.error("Maximum retries reached for Agent_stage1.")
-                    raise  # 如果达到最大重试次数，抛出异常
+                    raise  # If reach max retry_count, raise error.
         app.state.agent2.init(filename, generated_text1, model)
         redis_cache.set("agent_status", 1)
     else:
