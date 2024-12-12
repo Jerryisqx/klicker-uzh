@@ -74,8 +74,13 @@ from haystack_integrations.components.generators.google_ai import (
 # from haystack_experimental.components.retrievers import ChatMessageRetriever
 # from haystack_experimental.components.writers import ChatMessageWriter
 
-redis_cache = redis.Redis(host="redis_cache", port=6379, db=0)
+# redis_cache = redis.Redis(host="redis_cache", port=6379, db=0)
+redis_cache_host = os.getenv("REDIS_CACHE_HOST")  
+redis_cache_port = int(os.getenv("REDIS_CACHE_PORT"))  
+redis_cache_pass = os.getenv("REDIS_CACHE_PASS")  
 
+
+redis_cache = redis.Redis(host=redis_cache_host, port=redis_cache_port, password=redis_cache_pass)
 
 class DocumentStore:
     def __init__(self, filename):
@@ -227,13 +232,13 @@ class Agent_stage1:
 
     def run_agent(self):
         question = f"Please generate key points and all related original context according to the input document."
-        #         generation_kwargs = {"max_tokens": 4096}
+        generation_kwargs = {"max_tokens": 4096}
         response = self.rag_pipeline.run(
             {
                 "retriever": {"query": question},
                 # "text_embedder": {"text": question},
                 "prompt_builder": {"question": question},
-                #             "llm": {"generation_kwargs": generation_kwargs},
+                "llm": {"generation_kwargs": generation_kwargs},
                 "answer_builder": {"query": question},
             }
         )
@@ -299,7 +304,7 @@ class Agent_stage2:
 
     def run_agent(self, question_number, language, difficulty_level, question_type):
         question = f"Please generate {question_number} {question_type} questions, the difficulty of the questions is {difficulty_level}, and the question language is {language}."
-        #         generation_kwargs = {"max_tokens": 4096}
+        generation_kwargs = {"max_tokens": 4096}
         response = self.rag_pipeline.run(
             {
                 "retriever": {"query": question},
@@ -307,7 +312,7 @@ class Agent_stage2:
                     "question": question,
                     "generated_content": self.generated_content,
                 },
-                #             "llm": {"generation_kwargs": generation_kwargs},
+                "llm": {"generation_kwargs": generation_kwargs},
                 "answer_builder": {"query": question},
             }
         )

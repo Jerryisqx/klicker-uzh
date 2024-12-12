@@ -1,17 +1,20 @@
-# 使用 Python 基础镜像
+# Use Python base image
 FROM python:3.12
 
-# 设置工作目录
+# Set the working directory
 WORKDIR /app
 
-# 安装 Poetry
+# Copy all project files into the container
+COPY . /app
+
+# Install Poetry
 RUN pip install --no-cache-dir poetry
 
-# 复制项目文件（包含 pyproject.toml 和 poetry.lock）
-COPY pyproject.toml poetry.lock ./
-
-# 安装项目依赖到虚拟环境中
+# Install project dependencies in the global environment
 RUN poetry config virtualenvs.create false && poetry install --no-root
 
-# 创建 tmp 文件夹并设置权限
-RUN mkdir -p ./tmp && chmod -R 777 ./tmp
+# Generate Prisma client
+RUN prisma generate
+
+# Start the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

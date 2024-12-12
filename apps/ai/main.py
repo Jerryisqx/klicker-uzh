@@ -21,10 +21,10 @@ from parse_questions import parse_question
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
-database_url = os.getenv("DATABASE_URL_1")
+# database_url = os.getenv("DATABASE_URL_1")
 # Initialize Prisma client
 db = Prisma()
-os.environ["DATABASE_URL"] = database_url
+# os.environ["DATABASE_URL"] = database_url
 db.connect()
 # CORS configuration: allowing cross-domain requests from the front-end
 app.add_middleware(
@@ -35,7 +35,14 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-redis_cache = redis.Redis(host="redis_cache", port=6379)
+redis_cache_host = os.getenv("REDIS_CACHE_HOST")  
+redis_cache_port = int(os.getenv("REDIS_CACHE_PORT"))  
+redis_cache_pass = os.getenv("REDIS_CACHE_PASS")  
+
+
+redis_cache = redis.Redis(host=redis_cache_host, port=redis_cache_port, password=redis_cache_pass)
+# redis_cache = redis.Redis(host="redis_cache", port=6379)
+# redis_cache = redis.Redis(host=REDIS_CACHE_HOST, port=REDIS_CACHE_PORT, password=REDIS_CACHE_PASS)
 
 
 # Define the request model for generating questions

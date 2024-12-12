@@ -34,37 +34,38 @@ services:
       - klicker
 
   ai:
-    image: ghcr.io/jerryisqx/klicker-uzh/ai:v3-ai-dev
+    image:  ghcr.io/jerryisqx/klicker-uzh/ai:v3-ai-dev
+    # qingyuleo/test:v1.0.0
+    # ghcr.io/jerryisqx/klicker-uzh/ai:v3-ai-dev
     # container_name: ai
     ports:
       - "8000:8000"
     networks:
       - klicker
-    volumes:
-      - ./apps/ai:/app
-      - ./apps/ai/prisma/schema:/app/prisma/schema
-      - ./packages/prisma/src/prisma/schema:/app/prisma1/schema
-      # - ./doppler.yaml:/root/doppler.yaml
+    # volumes:
+    #   - ./apps/ai:/app
+    #   - ./apps/ai/prisma/schema:/app/prisma/schema
+    #   - ./packages/prisma/src/prisma/schema:/app/prisma1/schema
+    #   # - ./doppler.yaml:/root/doppler.yaml
     environment:
-      - DOPPLER_PROJECT   # Doppler 配置变量
-      - DOPPLER_ENVIRONMENT
-      - DOPPLER_CONFIG
-      - OPENAI_API_KEY
-      - DATABASE_URL_1
-      - DATABASE_URL    
-      - ANTHROPIC_API_KEY
-      - LLAMA_API_KEY
-      - TOGETHER_API_KEY
-      - LANGFUSE_PUBLIC_KEY
-      - LANGFUSE_SECRET_KEY
-      
-    command: >
-      sh -c "
-      cp /app/prisma1/schema/*.prisma /app/prisma/schema/ &&
-      rm -f /app/prisma/schema/js.prisma &&
-      prisma generate &&
-      uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-      "
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      LLAMA_API_KEY: ${LLAMA_API_KEY}
+      TOGETHER_API_KEY: ${TOGETHER_API_KEY}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+      DATABASE_URL: 'postgresql://klicker:klicker@postgres:5432/klicker'
+      REDIS_CACHE_HOST: 'redis_cache'
+      REDIS_CACHE_PASS: ''
+      REDIS_CACHE_PORT: 6379
+
+    # command: >
+    #   sh -c "
+    #   cp /app/prisma1/schema/*.prisma /app/prisma/schema/ &&
+    #   rm -f /app/prisma/schema/js.prisma &&
+    #   prisma generate &&
+    #   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    #   "
 
   reverse_proxy_wsl:
     image: docker.io/library/traefik:v2.10
