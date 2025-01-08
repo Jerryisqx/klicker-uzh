@@ -50,7 +50,7 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [generateError, setGenerateError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const [isFileUploaded, setIsFileUploaded] = useState(false);
+  const [isFileUploaded, setIsFileUploaded] = useState(false)
   const [fileChanged, setFileChanged] = useState(false)
   const itemsPerPage = 10 // number of question displayed per page
 
@@ -115,11 +115,11 @@ export default function Home() {
   // Handle the click event for "Generate Question" button
   const handleGenerateQuestions = async () => {
     if (!isFileUploaded) {
-        setGenerateError(t('manage.aiRelate.noFileSelected'));
-        setQuestionsGenerated(false);
-        return; // 停止调用 API
+      setGenerateError(t('manage.aiRelate.noFileSelected'))
+      setQuestionsGenerated(false)
+      return // 停止调用 API
     }
-    
+
     // const validationErrors = validateSelections()
     // if (validationErrors.length > 0) {
     //   setGenerateError(validationErrors.join(', '))
@@ -181,32 +181,36 @@ export default function Home() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     // 清空状态
-    setUploadSuccess(null);
-    setUploadError(null);
-  
+    setUploadSuccess(null)
+    setUploadError(null)
+
     if (event.target.files && event.target.files.length > 0) {
-      const file = event.target.files[0];
-  
+      const file = event.target.files[0]
+
       // 检查是否为相同文件
-      if (selectedFile && selectedFile.name === file.name && selectedFile.size === file.size) {
+      if (
+        selectedFile &&
+        selectedFile.name === file.name &&
+        selectedFile.size === file.size
+      ) {
         // 文件未更改，但允许重新上传
-        setFileChanged(false);
-        setSelectedFile(file); // 保留相同文件
-        setIsFileUploaded(false); // 重置上传状态，允许重新上传
+        setFileChanged(false)
+        setSelectedFile(file) // 保留相同文件
+        setIsFileUploaded(false) // 重置上传状态，允许重新上传
       } else {
         // 文件已更改
-        setSelectedFile(file);
-        setFileChanged(true); // 标记文件已更改
-        setIsFileUploaded(false); // 重置上传状态
+        setSelectedFile(file)
+        setFileChanged(true) // 标记文件已更改
+        setIsFileUploaded(false) // 重置上传状态
       }
     } else {
       // 如果 files 为 null 或为空数组，表示用户未选择文件
-      setSelectedFile(null);
-      setFileChanged(false);
-      setUploadError(t('manage.aiRelate.noFileSelected')); // 提示未选择文件
+      setSelectedFile(null)
+      setFileChanged(false)
+      setUploadError(t('manage.aiRelate.noFileSelected')) // 提示未选择文件
     }
-  };
-  
+  }
+
   // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 
   //   const fileInput = event.target;
@@ -216,7 +220,6 @@ export default function Home() {
   //     setUploadSuccess(null)
   //   }
   // }
-  
 
   const handleFileUpload = async () => {
     if (!selectedFile || !fileChanged) {
@@ -233,10 +236,13 @@ export default function Home() {
     formData.append('file', selectedFile)
 
     try {
-      const response = await fetch('http://localhost:8000/upload', {
-        method: 'POST',
-        body: formData,
-      })
+      const response = await fetch(
+        'https://manage.klicker-mp.bf-app.ch/ai/upload',
+        {
+          method: 'POST',
+          body: formData,
+        }
+      )
 
       if (response.ok) {
         console.log('File successfully uploaded')
@@ -258,7 +264,6 @@ export default function Home() {
       setUploadSuccess(false)
     }
   }
-
 
   const handleNumQuestionChange = (newValue: string) => {
     if (newValue === 'RANDOM') {
