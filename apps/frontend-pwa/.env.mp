@@ -1,0 +1,15 @@
+COOKIE_DOMAIN=.klicker-mp.bf-app.ch
+API_DOMAIN=backend-sls$COOKIE_DOMAIN
+
+NEXT_PUBLIC_AVATAR_BASE_PATH="https://sos-ch-dk-2.exo.io/klicker-prod/avatars"
+NEXT_PUBLIC_IMAGE_BASE_PATH="https://sos-ch-dk-2.exo.io/klicker-prod/img"
+NEXT_PUBLIC_ADD_RESPONSE_URL="https://backend-responses$COOKIE_DOMAIN/api/AddResponse"
+NEXT_PUBLIC_API_URL="https://$API_DOMAIN/api/graphql"
+NEXT_PUBLIC_API_URL_SSR="http://klicker-v2-mp-klicker-uzh-v2-backend-graphql:3000/api/graphql"
+NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY="BFTs2KshUdSwCqQgZzaaCZK7h3L4pd8hjJoLk1jv1-iPN9c-_7JdLkQi5IV_k3Ml4rrx12HOkcANwVk39L_RTOM"
+
+NEXT_PUBLIC_PWA_URL="https://pwa.klicker-mp.bf-app.ch"
+NEXT_PUBLIC_MANAGE_URL="https://manage.klicker-mp.bf-app.ch"
+NEXT_PUBLIC_CONTROL_URL="https://control.klicker-mp.bf-app.ch"
+
+NEXT_PUBLIC_WITH_MAGIC_LINK=true

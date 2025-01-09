@@ -1,0 +1,10 @@
+COOKIE_DOMAIN=.klicker-mp.bf-app.ch
+API_DOMAIN=backend-sls$COOKIE_DOMAIN
+
+NEXT_PUBLIC_AVATAR_BASE_PATH="https://sos-ch-dk-2.exo.io/klicker-prod/avatars"
+NEXT_PUBLIC_API_URL="https://$API_DOMAIN/api/graphql"
+NEXT_PUBLIC_API_URL_SSR="http://klicker-uzh-mp-klicker-uzh-v3-backend-graphql:3000/api/graphql"
+
+NEXT_PUBLIC_PWA_URL="https://pwa.klicker-mp.bf-app.ch"
+NEXT_PUBLIC_MANAGE_URL="https://manage.klicker-mp.bf-app.ch"
+NEXT_PUBLIC_CONTROL_URL="https://control.klicker-mp.bf-app.ch"
