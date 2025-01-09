@@ -1,4 +1,4 @@
-name: Build Docker image for frontend-manage (MP)
+name: Build Docker image for frontend-manage (mp)
 
 on:
   push:
@@ -27,11 +27,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Replace .env.production with .env.MP
+      - name: Replace .env.production with .env.mp
         shell: bash
         run: |
           rm apps/frontend-manage/.env.production
-          mv apps/frontend-manage/.env.MP apps/frontend-manage/.env.production
+          mv apps/frontend-manage/.env.mp apps/frontend-manage/.env.production
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
