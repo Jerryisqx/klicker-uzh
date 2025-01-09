@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, field_validator
+from starlette.middleware.sessions import SessionMiddleware
+from pydantic import BaseModel, Field
 from typing import List, Literal
 import random
 import logging
@@ -8,16 +9,16 @@ import re
 import os
 import json
 import uuid
+import redis
+from io import BytesIO
 from datetime import datetime
-from agent_haystack_2 import DocumentStore, Agent_stage1, Agent_stage2, Converter
+from agent_haystack_2 import Agent_stage1, Agent_stage2, DocumentStore, Converter
 from prisma import Prisma
 import asyncio
 from datetime import timedelta
 import hashlib
 from parse_questions import parse_question
 
-# Set the file expiry time to 1 minute
-FILE_EXPIRATION_TIME = timedelta(minutes=60)
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 # database_url = os.getenv("DATABASE_URL_1")
@@ -38,29 +39,10 @@ redis_cache_host = os.getenv("REDIS_CACHE_HOST")
 redis_cache_port = int(os.getenv("REDIS_CACHE_PORT"))  
 redis_cache_pass = os.getenv("REDIS_CACHE_PASS")  
 
+
 redis_cache = redis.Redis(host=redis_cache_host, port=redis_cache_port, password=redis_cache_pass)
 # redis_cache = redis.Redis(host="redis_cache", port=6379)
 # redis_cache = redis.Redis(host=REDIS_CACHE_HOST, port=REDIS_CACHE_PORT, password=REDIS_CACHE_PASS)
-
-# Setting the base directory for uploading files
-# UPLOAD_FOLDER = "tmp"
-# if not os.path.exists(UPLOAD_FOLDER):
-#     os.makedirs(UPLOAD_FOLDER)
-# uploaded_files = {}
-
-# last_uploaded_file = None  # Record information about the last uploaded file
-
-
-def check_if_new_file(file_path: str) -> bool:
-    global last_uploaded_file, uploaded_files
-    if last_uploaded_file == uploaded_files[file_path]:
-        return False
-    return True
-
-
-# def calculate_file_hash(contents: bytes) -> str:
-#     #calculate the hash to know if the file change
-#     return hashlib.sha256(contents).hexdigest()
 
 
 # Define the request model for generating questions
@@ -130,24 +112,6 @@ def validate_file_type(file: UploadFile):
         )
 
 
-# # Function to get the latest PDF file from the database that is not deleted
-# async def get_latest_pdf():
-#     try:
-#         result = await db.pdf_files.find_first(
-#             where={"is_deleted": False}, order={"uploaded_at": "desc"}
-#         )
-#         if result:
-#             return {
-#                 "pdf_id": result.id,
-#                 "file_name": result.file_name,
-#                 "file_path": result.file_path,
-#             }
-#         return None
-#     except Exception as e:
-#         logging.error(f"Error querying the PDF data: {e}")
-#         raise
-
-
 def map_question_type(generated_type):
     type_mapping = {
         "Single Choice": "SC",
@@ -197,13 +161,8 @@ async def insert_questions_to_db(questions):
         raise
 
 
-# agent_cache = None
-
-
 @app.post("/generate/")
 async def generate_questions(request: GenerateQuestionsRequest):
-    # global filename, agent_cache, generated_text1
-
     questions_number = request.limit
     language = request.language
     type = request.type
@@ -215,23 +174,17 @@ async def generate_questions(request: GenerateQuestionsRequest):
 
     logging.info("Starting the question generation process...")
 
-    # pdf_file_path = os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
     # prompt_path1 = os.path.join(os.getcwd(), "stage1.txt")
     # prompt_path2 = os.path.join(os.getcwd(), "stage2.txt")
     # with open(prompt_path1, "r", encoding="utf-8") as file:
     #     stage1 = file.read()
     # with open(prompt_path2, "r", encoding="utf-8") as file:
     #     stage2 = file.read()
-    # is_new_file = check_if_new_file(pdf_file_path)
-    # logging.info(f"Is there any new file {is_new_file}")
-    # if agent_cache is None:
-    #     logging.info("Agent_cache IS NONE")
-    # else:
-    #     logging.info("Agent_cache IS NOT NONE")
 
     MAX_RETRIES = 3
     retry_count = 0
     generated_text1 = None
+
     if redis_cache.exists("document_store") == 0:
         logging.error("Cached File are deleted, please upload new file again!")
         return {"error": "Cannot find document store."}
@@ -240,11 +193,12 @@ async def generate_questions(request: GenerateQuestionsRequest):
         logging.info("Initializing OpenAI generator and retriever...")
         while generated_text1 is None and retry_count < MAX_RETRIES:
             try:
+                # agent1 = Agent_stage1(model=model, template=stage1, filename=filename)
                 app.state.agent1.init(filename, model)
                 logging.info(f"Running Agent_stage1 (attempt {retry_count + 1})...")
                 response1 = app.state.agent1.run_agent()
                 generated_text1 = response1["answer_builder"]["answers"][0].data
-                if not generated_text1:  # Test if the result is none
+                if not generated_text1:  # 检查生成结果是否为空
                     raise ValueError("Generated text1 is empty.")
                 else:
                     logging.info(f"Generated text:\n{generated_text1}")
@@ -255,13 +209,13 @@ async def generate_questions(request: GenerateQuestionsRequest):
                     logging.info("Retrying Agent_stage1...")
                 else:
                     logging.error("Maximum retries reached for Agent_stage1.")
-                    raise  # If reach max retry_count raise error
+                    raise  # 如果达到最大重试次数，抛出异常
         app.state.agent2.init(filename, generated_text1, model)
         redis_cache.set("agent_status", 1)
     else:
-        logging.info("Agent for document already exists.")
-    generated_text2 = None
+        logging.info("Agent for document already exists")
 
+    generated_text2 = None
     # Retry logic
     MAX_RETRIES = 3
     retry_count = 0
@@ -304,6 +258,9 @@ async def generate_questions(request: GenerateQuestionsRequest):
             # restart agent
             try:
                 if True:
+                    # agent2 = Agent_stage2(
+                    #     retriever=generated_text1, template=stage2, filename=filename
+                    # )
                     app.state.agent2.init(filename, generated_text1, model)
                     redis_cache.set("agent_status", 1)
                 else:

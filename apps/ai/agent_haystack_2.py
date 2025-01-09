@@ -3,7 +3,7 @@
 
 import logging
 import os
-# import hashlib
+import hashlib
 import time
 import threading
 
@@ -12,6 +12,11 @@ import subprocess
 import re
 import json
 import redis
+
+# from litellm import completion
+# from litellm import LiteLLM
+from haystack import component
+
 # OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 # LLAMA_API_KEY= os.getenv("LLAMA_API_KEY")
@@ -44,10 +49,6 @@ from docling_core.transforms.chunker.base import BaseChunk
 from haystack import Pipeline, Document
 from haystack.document_stores.in_memory import InMemoryDocumentStore
 from haystack.document_stores.types import DuplicatePolicy
-from haystack.components.retrievers.in_memory import (
-    InMemoryEmbeddingRetriever,
-    InMemoryBM25Retriever,
-)
 from haystack.components.converters import PyPDFToDocument
 from haystack.components.routers import FileTypeRouter
 from haystack.components.preprocessors import DocumentSplitter, DocumentCleaner
@@ -58,7 +59,10 @@ from haystack.components.embedders import (
     SentenceTransformersTextEmbedder,
 )
 from haystack.components.generators import OpenAIGenerator, HuggingFaceAPIGenerator
-from haystack.components.retrievers.in_memory import InMemoryEmbeddingRetriever
+from haystack.components.retrievers.in_memory import (
+    InMemoryEmbeddingRetriever,
+    InMemoryBM25Retriever,
+)
 from haystack.components.builders import PromptBuilder, AnswerBuilder
 from haystack_integrations.components.connectors.langfuse import LangfuseConnector
 from haystack_integrations.components.generators.anthropic import AnthropicGenerator
@@ -66,6 +70,11 @@ from haystack_integrations.components.generators.google_ai import (
     GoogleAIGeminiGenerator,
 )
 
+# from haystack_experimental.chat_message_stores.in_memory import InMemoryChatMessageStore
+# from haystack_experimental.components.retrievers import ChatMessageRetriever
+# from haystack_experimental.components.writers import ChatMessageWriter
+
+# redis_cache = redis.Redis(host="redis_cache", port=6379, db=0)
 redis_cache_host = os.getenv("REDIS_CACHE_HOST")  
 redis_cache_port = int(os.getenv("REDIS_CACHE_PORT"))  
 redis_cache_pass = os.getenv("REDIS_CACHE_PASS")  
@@ -113,6 +122,7 @@ class DocumentStore:
         remaining = self.document_store.count_documents()
         logging.info(f"Deleted, {remaining} docuemnts remained from document store")
 
+
 class Converter:
     def __init__(self, buf, filename, document_store):
         self.buf = buf
@@ -152,6 +162,7 @@ class Converter:
         )
         return ids
 
+
 def extract_questions(context, num, generated_content):
     context = re.sub(r"```json|```", "", context).strip()
     context = re.sub(r"\*", "", context).strip()
@@ -173,23 +184,13 @@ def extract_questions(context, num, generated_content):
 class Agent_stage1:
     def __init__(self, template):
         # Openai API Key
-        # self.retriever = retriever
         # self.api_key = os.environ["OPENAI_API_KEY"]
-        # self.rag_pipeline = Pipeline()
-        # self.tracer = LangfuseConnector("Basic RAG Pipeline")
-        # if model == "OpenAI":
-        #     # load_openai_api_key()
-        #     self.api_key = os.getenv("OPENAI_API_KEY")
-        #     self.generator = OpenAIGenerator(model="gpt-4o-2024-11-20")
+        # elif model=='Llama':
+        #     self.api_key = os.getenv("LLAMA_API_KEY")
+        #     self.generator = HuggingFaceAPIGenerator(api_type="text_generation_inference", api_params={"model_name": "meta-llama/Meta-Llama-3-8B"})
         # else:
-        #     self.api_key = os.getenv("ANTHROPIC_API_KEY")
-        #     self.generator = AnthropicGenerator(model="claude-3-haiku-20240307")
-        # # elif model=='Llama':
-        # #     self.api_key = os.getenv("LLAMA_API_KEY")
-        # #     self.generator = HuggingFaceAPIGenerator(api_type="text_generation_inference", api_params={"model_name": "meta-llama/Meta-Llama-3-8B"})
-        # # else:
-        # #     self.api_key = os.getenv("TOGETHER_API_KEY")
-        # #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
+        #     self.api_key = os.getenv("TOGETHER_API_KEY")
+        #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
         # self.text_embedder = SentenceTransformersTextEmbedder(
         #     model="sentence-transformers/all-MiniLM-L6-v2"
         # )
@@ -234,6 +235,7 @@ class Agent_stage1:
         response = self.rag_pipeline.run(
             {
                 "retriever": {"query": question},
+                # "text_embedder": {"text": question},
                 "prompt_builder": {"question": question},
                 "llm": {"generation_kwargs": generation_kwargs},
                 "answer_builder": {"query": question},
@@ -243,37 +245,17 @@ class Agent_stage1:
 
 
 class Agent_stage2:
-    def __init__(self, retriever, model, template):
-        # Openai API Key
-        # self.document_store = InMemoryDocumentStore()
-        # self.documents = [
-        #     Document(
-        #         content=retriever,
-        #         meta={"source": "Generated Content"},
-        #         id="generated_1",
-        #     )
-        # ]
-        # self.document_store.write_documents(documents=self.documents)
-        # self.retriever = InMemoryBM25Retriever(document_store=self.document_store)
+    def __init__(self, template):
         # self.api_key = os.environ["OPENAI_API_KEY"]
-        # self.rag_pipeline = Pipeline()
-        # self.tracer = LangfuseConnector("Basic RAG Pipeline")
-        # if model == "OpenAI":
-        #     # load_openai_api_key()
-        #     self.api_key = os.getenv("OPENAI_API_KEY")
-        #     self.generator = OpenAIGenerator(model="gpt-4o-2024-11-20")
-        # else:
-        #     self.api_key = os.getenv("ANTHROPIC_API_KEY")
-        #     self.generator = AnthropicGenerator(model="claude-3-haiku-20240307")
-        # elif model=='Llama':
-        #     self.api_key = os.getenv("LLAMA_API_KEY")
-        #     self.generator = HuggingFaceAPIGenerator(api_type="text_generation_inference", api_params={"model_name": "meta-llama/Meta-Llama-3-8B"})
-        # else:
-        #     self.api_key = os.getenv("TOGETHER_API_KEY")
-        #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
+
         self.template = template
+        # Memory components
+        # self.memory_store = InMemoryChatMessageStore()
+        # self.memory_retriever = ChatMessageRetriever(memory_store)
+        # self.memory_writer = ChatMessageWriter(memory_store)
 
     def init(self, filename, agent_one_content, model):
+        # Openai API Key
         self.rag_pipeline = Pipeline()
         self.document_store = InMemoryDocumentStore(index=filename)
         self.documents = [
@@ -304,6 +286,7 @@ class Agent_stage2:
         self.generated_content = ""
         self.prompt_builder = PromptBuilder(template=self.template)
         self.answer_builder = AnswerBuilder()
+
         # Add components to your pipeline
         # self.rag_pipeline.add_component("tracer", self.tracer)
         self.rag_pipeline.add_component("retriever", self.retriever)
