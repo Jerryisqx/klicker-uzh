@@ -35,16 +35,14 @@ export async function GenerateQuestionsAPI(
 ) {
   //call python api
   try {
-    const response = await fetch(
-      'https://manage.klicker-mp.bf-app.ch/ai/generate',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ limit, language, difficulty, type, model }),
-      }
-    )
+    // change to https://manage.klicker-mp.bf-app.ch/ai/generate for online
+    const response = await fetch('https://localhost:8000/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ limit, language, difficulty, type, model }),
+    })
     if (!response.ok) {
       throw new Error(`Error: ${response.statusText}`)
     }

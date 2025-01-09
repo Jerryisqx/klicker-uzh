@@ -20,10 +20,10 @@ from parse_questions import parse_question
 FILE_EXPIRATION_TIME = timedelta(minutes=60)
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
-database_url = os.getenv("DATABASE_URL_1")
+# database_url = os.getenv("DATABASE_URL_1")
 # Initialize Prisma client
 db = Prisma()
-os.environ["DATABASE_URL"] = database_url
+# os.environ["DATABASE_URL"] = database_url
 db.connect()
 # CORS configuration: allowing cross-domain requests from the front-end
 app.add_middleware(
@@ -34,13 +34,21 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-# Setting the base directory for uploading files
-UPLOAD_FOLDER = "tmp"
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-uploaded_files = {}
+redis_cache_host = os.getenv("REDIS_CACHE_HOST")  
+redis_cache_port = int(os.getenv("REDIS_CACHE_PORT"))  
+redis_cache_pass = os.getenv("REDIS_CACHE_PASS")  
 
-last_uploaded_file = None  # Record information about the last uploaded file
+redis_cache = redis.Redis(host=redis_cache_host, port=redis_cache_port, password=redis_cache_pass)
+# redis_cache = redis.Redis(host="redis_cache", port=6379)
+# redis_cache = redis.Redis(host=REDIS_CACHE_HOST, port=REDIS_CACHE_PORT, password=REDIS_CACHE_PASS)
+
+# Setting the base directory for uploading files
+# UPLOAD_FOLDER = "tmp"
+# if not os.path.exists(UPLOAD_FOLDER):
+#     os.makedirs(UPLOAD_FOLDER)
+# uploaded_files = {}
+
+# last_uploaded_file = None  # Record information about the last uploaded file
 
 
 def check_if_new_file(file_path: str) -> bool:
@@ -63,14 +71,14 @@ class GenerateQuestionsRequest(BaseModel):
     difficulty: str
     model: str
 
-    @field_validator("language")
-    def validate_language(cls, value):
-        allowed_languages = {"English", "German"}
-        if value not in allowed_languages:
-            raise ValueError(
-                f"Invalid Languages: {value}, Language must be one of {allowed_languages}"
-            )
-        return value
+    # @field_validator("language")
+    # def validate_language(cls, value):
+    #     allowed_languages = {"English", "German"}
+    #     if value not in allowed_languages:
+    #         raise ValueError(
+    #             f"Invalid Languages: {value}, Language must be one of {allowed_languages}"
+    #         )
+    #     return value
 
     # @field_validator("type")
     # def validate_type(cls, value):
@@ -122,22 +130,22 @@ def validate_file_type(file: UploadFile):
         )
 
 
-# Function to get the latest PDF file from the database that is not deleted
-async def get_latest_pdf():
-    try:
-        result = await db.pdf_files.find_first(
-            where={"is_deleted": False}, order={"uploaded_at": "desc"}
-        )
-        if result:
-            return {
-                "pdf_id": result.id,
-                "file_name": result.file_name,
-                "file_path": result.file_path,
-            }
-        return None
-    except Exception as e:
-        logging.error(f"Error querying the PDF data: {e}")
-        raise
+# # Function to get the latest PDF file from the database that is not deleted
+# async def get_latest_pdf():
+#     try:
+#         result = await db.pdf_files.find_first(
+#             where={"is_deleted": False}, order={"uploaded_at": "desc"}
+#         )
+#         if result:
+#             return {
+#                 "pdf_id": result.id,
+#                 "file_name": result.file_name,
+#                 "file_path": result.file_path,
+#             }
+#         return None
+#     except Exception as e:
+#         logging.error(f"Error querying the PDF data: {e}")
+#         raise
 
 
 def map_question_type(generated_type):
@@ -189,12 +197,12 @@ async def insert_questions_to_db(questions):
         raise
 
 
-agent_cache = None
+# agent_cache = None
 
 
-@app.post("/generate")
+@app.post("/generate/")
 async def generate_questions(request: GenerateQuestionsRequest):
-    global filename, agent_cache, generated_text1
+    # global filename, agent_cache, generated_text1
 
     questions_number = request.limit
     language = request.language
@@ -207,36 +215,36 @@ async def generate_questions(request: GenerateQuestionsRequest):
 
     logging.info("Starting the question generation process...")
 
-    pdf_file_path = os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
-    prompt_path1 = os.path.join(os.getcwd(), "stage1.txt")
-    prompt_path2 = os.path.join(os.getcwd(), "stage2.txt")
-    with open(prompt_path1, "r", encoding="utf-8") as file:
-        stage1 = file.read()
-    with open(prompt_path2, "r", encoding="utf-8") as file:
-        stage2 = file.read()
-    is_new_file = check_if_new_file(pdf_file_path)
-    logging.info(f"Is there any new file {is_new_file}")
-    if agent_cache is None:
-        logging.info("Agent_cache IS NONE")
-    else:
-        logging.info("Agent_cache IS NOT NONE")
+    # pdf_file_path = os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
+    # prompt_path1 = os.path.join(os.getcwd(), "stage1.txt")
+    # prompt_path2 = os.path.join(os.getcwd(), "stage2.txt")
+    # with open(prompt_path1, "r", encoding="utf-8") as file:
+    #     stage1 = file.read()
+    # with open(prompt_path2, "r", encoding="utf-8") as file:
+    #     stage2 = file.read()
+    # is_new_file = check_if_new_file(pdf_file_path)
+    # logging.info(f"Is there any new file {is_new_file}")
+    # if agent_cache is None:
+    #     logging.info("Agent_cache IS NONE")
+    # else:
+    #     logging.info("Agent_cache IS NOT NONE")
 
     MAX_RETRIES = 3
     retry_count = 0
     generated_text1 = None
-    if is_new_file or agent_cache is None:
+    if redis_cache.exists("document_store") == 0:
+        logging.error("Cached File are deleted, please upload new file again!")
+        return {"error": "Cannot find document store."}
+    elif int(redis_cache.get("agent_status")) == 0:
+        filename = redis_cache.get("filename").decode("utf-8")
         logging.info("Initializing OpenAI generator and retriever...")
         while generated_text1 is None and retry_count < MAX_RETRIES:
             try:
-                preprocess = PreProcess()
-                preprocess.init()
-                retriever = preprocess.run_preprocess(pdf_file_path)
-                agent1 = Agent_stage1(retriever=retriever, model=model, template=stage1)
-                agent1.init()
+                app.state.agent1.init(filename, model)
                 logging.info(f"Running Agent_stage1 (attempt {retry_count + 1})...")
-                response1 = agent1.run_agent()
+                response1 = app.state.agent1.run_agent()
                 generated_text1 = response1["answer_builder"]["answers"][0].data
-                if not generated_text1:  # 检查生成结果是否为空
+                if not generated_text1:  # Test if the result is none
                     raise ValueError("Generated text1 is empty.")
                 else:
                     logging.info(f"Generated text:\n{generated_text1}")
@@ -247,13 +255,11 @@ async def generate_questions(request: GenerateQuestionsRequest):
                     logging.info("Retrying Agent_stage1...")
                 else:
                     logging.error("Maximum retries reached for Agent_stage1.")
-                    raise  # 如果达到最大重试次数，抛出异常
-        agent2 = Agent_stage2(retriever=generated_text1, model=model, template=stage2)
-        agent2.init()
-        agent_cache = agent2
+                    raise  # If reach max retry_count raise error
+        app.state.agent2.init(filename, generated_text1, model)
+        redis_cache.set("agent_status", 1)
     else:
-        agent2 = agent_cache
-        logging.info("No new file detected. Using existing Agent...")
+        logging.info("Agent for document already exists.")
     generated_text2 = None
 
     # Retry logic
@@ -267,7 +273,7 @@ async def generate_questions(request: GenerateQuestionsRequest):
                 # If generate error,restart agent
                 logging.info(f"Generating response (attempt {retry_count + 1})...")
                 try:
-                    response2 = agent2.run_agent(
+                    response2 = app.state.agent2.run_agent(
                         questions_number, language, difficulty, type
                     )
                     generated_text2 = response2["answer_builder"]["answers"][0].data
@@ -297,10 +303,9 @@ async def generate_questions(request: GenerateQuestionsRequest):
             retry_count += 1
             # restart agent
             try:
-                if is_new_file:
-                    agent2 = Agent_stage2(retriever=generated_text1, template=stage2)
-                    agent2.init()
-                    agent_cache = agent2
+                if True:
+                    app.state.agent2.init(filename, generated_text1, model)
+                    redis_cache.set("agent_status", 1)
                 else:
                     continue
             except Exception as init_error:
@@ -311,44 +316,61 @@ async def generate_questions(request: GenerateQuestionsRequest):
         logging.error(
             "Failed to insert questions into the database after maximum retries."
         )
-        return {"error": "Failed to insert questions into the database."},500
+        return {"error": "Failed to insert questions into the database."}
 
     return {"latestNQuestions": generated_text2}
 
 
 # Receive PDF file and save it into /tmp folder
-@app.post("/upload")
+@app.post("/upload/")
 async def upload_pdf(file: UploadFile = File(...)):
-    global filename, uploaded_files, last_uploaded_file
-    contents = await file.read()
-    with open(f"{UPLOAD_FOLDER}/{file.filename}", "wb") as f:
-        f.write(contents)
-    filename = file.filename
-    file_path = os.path.join(os.getcwd(), UPLOAD_FOLDER, filename)
-    uploaded_files[file_path] = datetime.now()
-    last_uploaded_file = uploaded_files[file_path]
+    input_bytes = await file.read()
+    filename = str(file.filename)
+    buf = BytesIO(input_bytes)
+
+    if input_bytes == None:
+        logging.error("No upload file found.")
+        return {"message": "Upload not successful"}
+
+    if (
+        redis_cache.exists("filename") == 1
+        and redis_cache.get("filename").decode("utf-8") == filename
+    ):
+        document_store = DocumentStore(filename).get_store()
+        if document_store.count_documents() != 0:
+            logging.info("Uploaded file in cache, using cached data ...")
+            return {"message": "Upload successful"}
+    elif (
+        redis_cache.exists("filename") == 1
+        and redis_cache.get("filename").decode("utf-8") != filename
+    ):
+        logging.info("Found unused cached memory, deleting first ...")
+        DocumentStore(redis_cache.get("filename")).delete()
+
+    document_store = DocumentStore(filename).get_store()
+    DocConveter = Converter(buf, filename, document_store)
+    ids = DocConveter.convert()
+
+    upload_pipe = redis_cache.pipeline()
+    upload_pipe.set("filename", filename)
+    upload_pipe.set("document_store", 1)
+    upload_pipe.set("agent_status", 0)
+    for i_d in ids:
+        upload_pipe.rpush("document_id", i_d)
+    upload_pipe.execute()
+    logging.info("Upload successfully")
     return {"message": "Upload successful"}
 
 
-# Define tasks to delete expired files
-async def delete_expired_files():
-    while True:
-        now = datetime.now()
-        for file_path, upload_time in list(uploaded_files.items()):
-            # Delete the file if it is out of date
-            if now - upload_time > FILE_EXPIRATION_TIME:
-                try:
-                    os.remove(file_path)
-                    del uploaded_files[
-                        file_path
-                    ]  # Deletion of documents from the record
-                    logging.info(f"Deleted expired file: {file_path}")
-                except Exception as e:
-                    logging.info(f"Failed to delete file {file_path}: {str(e)}")
-        await asyncio.sleep(60)  # Check every 60 seconds
-
-
-# Starting a timed task
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(delete_expired_files())
+    # Init Agent
+    prompt_path1 = os.path.join(os.getcwd(), "stage1.txt")
+    prompt_path2 = os.path.join(os.getcwd(), "stage2.txt")
+    with open(prompt_path1, "r", encoding="utf-8") as file:
+        stage1 = file.read()
+    with open(prompt_path2, "r", encoding="utf-8") as file:
+        stage2 = file.read()
+    app.state.agent1 = Agent_stage1(template=stage1)
+    app.state.agent2 = Agent_stage2(template=stage2)
+    logging.info("Agent Instance created.")

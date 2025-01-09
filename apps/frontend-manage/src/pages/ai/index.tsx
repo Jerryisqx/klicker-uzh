@@ -117,7 +117,7 @@ export default function Home() {
     if (!isFileUploaded) {
       setGenerateError(t('manage.aiRelate.noFileSelected'))
       setQuestionsGenerated(false)
-      return // 停止调用 API
+      return // Stop calling API
     }
 
     // const validationErrors = validateSelections()
@@ -180,34 +180,32 @@ export default function Home() {
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // 清空状态
+    // Clean status
     setUploadSuccess(null)
     setUploadError(null)
 
     if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0]
 
-      // 检查是否为相同文件
+      // Check if it is the same file
       if (
         selectedFile &&
         selectedFile.name === file.name &&
         selectedFile.size === file.size
       ) {
-        // 文件未更改，但允许重新上传
+        // File not modified, but allowed to upload
         setFileChanged(false)
-        setSelectedFile(file) // 保留相同文件
-        setIsFileUploaded(false) // 重置上传状态，允许重新上传
+        setSelectedFile(file) // Keep the same file
+        setIsFileUploaded(false) // Reset upload status, allow to upload
       } else {
-        // 文件已更改
         setSelectedFile(file)
-        setFileChanged(true) // 标记文件已更改
-        setIsFileUploaded(false) // 重置上传状态
+        setFileChanged(true)
+        setIsFileUploaded(false)
       }
     } else {
-      // 如果 files 为 null 或为空数组，表示用户未选择文件
       setSelectedFile(null)
       setFileChanged(false)
-      setUploadError(t('manage.aiRelate.noFileSelected')) // 提示未选择文件
+      setUploadError(t('manage.aiRelate.noFileSelected'))
     }
   }
 
@@ -234,15 +232,12 @@ export default function Home() {
 
     const formData = new FormData()
     formData.append('file', selectedFile)
-
+    // Change to https://manage.klicker-mp.bf-app.ch/ai/upload for online
     try {
-      const response = await fetch(
-        'https://manage.klicker-mp.bf-app.ch/ai/upload',
-        {
-          method: 'POST',
-          body: formData,
-        }
-      )
+      const response = await fetch('https://localhost:8000/upload', {
+        method: 'POST',
+        body: formData,
+      })
 
       if (response.ok) {
         console.log('File successfully uploaded')
