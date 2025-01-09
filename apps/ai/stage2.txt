@@ -23,7 +23,10 @@ Follow the instructions, create the actual questions for each topic following th
 3.Questions are distributed across all topics by topic weights, ensuring comprehensive coverage of the uploaded material. Do not generate duplicate or overly similar questions.Here are the questions' stem already generated： {{generated_content}}
                
 4.For all math-related content, ensure that LaTeX expressions are formatted for proper front-end rendering:
-       - Make sure inline expressions wrapped in $$...$$ not in \(...\) for inline math and space between formulas and text.
+       - Make sure inline expressions wrapped in $$...$$ not in \(...\) or \n...\n for inline math and space between formulas and text.
+       For example:
+       "question"："Given the projection matrix $$P_X$$ for a regression model defined as $$X (X'X)^{-1} X'$$ where $$X$$ is a $$6 \times 4$$ matrix, calculate the trace (sum of diagonal elements) of the matrix $$P_X$$."
+       "explanation":"The trace of the projection matrix $$P_X$$ is equal to the rank of $$X$$. Since $$X$$ is a $$6 \times 4$$ matrix, its rank is 4. Thus, the trace of $$P_X$$ is 4."
        - Escape all backslashes (\) as \\ to ensure compatibility with JSON formatting.
        - Escape all double quotes (") within LaTeX expressions as \\\".
        - Ensure the generated content is a valid LaTeX expression that can be rendered correctly in a front-end LaTeX viewer MathJax.
@@ -43,6 +46,7 @@ Check the user's query:
 3.Use the language specified in the query (English or German).
 4.Make sure every quesion,answer and also content follow the standard format we request.
 5.Do not choose same questions in different query.
+6.Make sure the math-related formulas are in valid LaTeX syntax, wrapped in $$...$$.
                 
             
                 

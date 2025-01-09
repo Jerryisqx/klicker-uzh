@@ -144,13 +144,13 @@ async def insert_questions_to_db(questions):
                     "createdAt": datetime.now(),
                     "updatedAt": datetime.now(),
                     "difficulty": question["difficulty"],
-                    "explanation": (
+                    "explanation":(
                         question["options"]
                         .get("explanation", "")
                         .split("'explanation':")[-1]
                         if "explanation" in question["options"]
                         else ""
-                    ),
+                    ).replace("\r", "\\r").replace("\n", ""),
                 }
             )
         logging.info(
