@@ -34,10 +34,11 @@ services:
       - klicker
 
   ai:
-    image:  ghcr.io/jerryisqx/klicker-uzh/ai:v3-ai-dev
+    image: klickerai:amd64arm64
+    # ghcr.io/jerryisqx/klicker-uzh/ai:v3-ai-dev
     # qingyuleo/test:v1.0.0
     # ghcr.io/jerryisqx/klicker-uzh/ai:v3-ai-dev
-    # container_name: ai
+    container_name: ai
     ports:
       - "8000:8000"
     networks:

@@ -9,7 +9,7 @@ import os
 import json
 import uuid
 from datetime import datetime
-from agent_haystack_2 import PreProcess, Agent_stage1, Agent_stage2
+from agent_haystack_2 import DocumentStore, Agent_stage1, Agent_stage2, Converter
 from prisma import Prisma
 import asyncio
 from datetime import timedelta
