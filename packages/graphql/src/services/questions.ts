@@ -22,7 +22,7 @@ export async function GenerateQuestionsAPI(
   ctx) {
   //call python api
   try {
-    const response = await fetch('http://localhost:8000/generate', {
+    const response = await fetch('https://manage.klicker-mp.bf-app.ch/ai/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
