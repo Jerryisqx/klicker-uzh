@@ -101,7 +101,10 @@ class Back(BaseModel):
 def parse_question(generated_text, num):
     context = re.sub(r"```json|```", "", generated_text).strip()
     context = re.sub(r"\*", "", context).strip()
-    context = context.replace("\\", "\\\\")
+    context = re.sub(r'\$(.*?)\$', r'$$\1$$', context)
+    context = context.replace(r"\\\(", "$$").replace(r"\\\)", "$$")
+
+    # context= context.replace("\n", "\\n").replace("\r", "\\r")
     parts = re.split(r"\n\s*\n", context)
     if len(parts) >= num + 1:
         parts = parts[len(parts) - num :]

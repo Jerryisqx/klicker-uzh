@@ -233,7 +233,7 @@ export default function Home() {
     formData.append('file', selectedFile)
 
     try {
-      const response = await fetch('http://localhost:8000/upload', {
+      const response = await fetch('https://manage.klicker-mp.bf-app.ch/ai/upload', {
         method: 'POST',
         body: formData,
       })

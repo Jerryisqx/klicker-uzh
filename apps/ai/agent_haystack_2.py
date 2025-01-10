@@ -169,9 +169,8 @@ def extract_questions(context, num, generated_content):
     # context = context.replace("\\", "\\\\")
     #     print(context)
     parts = re.split(r"\n\s*\n", context)
-    print(len(parts))
-    if len(parts) == num + 1:
-        parts = parts[1:]
+    if len(parts) >= num + 1:
+        parts = parts[len(parts) - num :]
 
     for part in parts:
         base_part = part.split("Back:")[0].strip()

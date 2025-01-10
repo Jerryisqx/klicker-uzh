@@ -48,6 +48,8 @@ services:
     #   - ./packages/prisma/src/prisma/schema:/app/prisma1/schema
     #   # - ./doppler.yaml:/root/doppler.yaml
     environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       LLAMA_API_KEY: ${LLAMA_API_KEY}
