@@ -79,6 +79,7 @@
     "seed:prod:flashcards": "ENV=development doppler run --config prd -- tsx src/data/seedFlashcards.ts",
     "seed:prod:repetitionPool": "ENV=development doppler run --config prd -- tsx src/data/seedRepetitionPool.ts",
     "seed:qa": "ENV=development doppler run --config stg -- tsx src/data/seedTEST.ts",
+    "seed:mp": "ENV=development doppler run --config mp -- tsx src/data/seedTEST.ts",
     "seed:test": "ENV=development tsx src/data/seedTEST.ts"
   },
   "engines": {
