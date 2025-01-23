@@ -1055,6 +1055,7 @@ type Mutation {
   updateParticipantProfile(email: String!, isProfilePublic: Boolean, password: String, username: String!): Participant
   updateQuestionInstances(questionId: Int!): [QuestionOrElementInstance!]!
   updateTagOrdering(originIx: Int!, targetIx: Int!): [Tag!]
+  uploadFile: Boolean
   upvoteFeedback(feedbackId: Int!, increment: Int!): Feedback
   voteFeedbackResponse(id: Int!, incrementDownvote: Int!, incrementUpvote: Int!): FeedbackResponse
 }

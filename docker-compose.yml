@@ -42,8 +42,8 @@ services:
       - "8000:8000"
     networks:
       - klicker
-    # volumes:
-    #   - ./apps/ai:/app
+    volumes:
+      - ./apps/ai:/app
     #   - ./apps/ai/prisma/schema:/app/prisma/schema
     #   - ./packages/prisma/src/prisma/schema:/app/prisma1/schema
     #   # - ./doppler.yaml:/root/doppler.yaml
@@ -61,13 +61,11 @@ services:
       REDIS_CACHE_PASS: ''
       REDIS_CACHE_PORT: 6379
 
-    # command: >
-    #   sh -c "
-    #   cp /app/prisma1/schema/*.prisma /app/prisma/schema/ &&
-    #   rm -f /app/prisma/schema/js.prisma &&
-    #   prisma generate &&
-    #   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    #   "
+    command: >
+      sh -c "
+      prisma generate &&
+      uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      "
 
   reverse_proxy_wsl:
     image: docker.io/library/traefik:v2.10

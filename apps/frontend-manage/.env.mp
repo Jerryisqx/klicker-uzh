@@ -10,3 +10,6 @@ NEXT_PUBLIC_MANAGE_URL="https://manage.klicker-mp.bf-app.ch"
 NEXT_PUBLIC_CONTROL_URL="https://control.klicker-mp.bf-app.ch"
 NEXT_PUBLIC_AUTH_URL="https://auth.klicker-mp.bf-app.ch"
 NEXT_PUBLIC_LTI_URL="https://lti.klicker-mp.bf-app.ch"
+
+AI_GENERATE_URL="https://manage.klicker-mp.bf-app.ch/generate"
+FILE_UPLOAD_URL="https://manage.klicker-mp.bf-app.ch/upload"

@@ -1,0 +1,18 @@
+# mutation UploadFileAPI($body: Upload!) {
+#   uploadFile(body: $body)
+# }
+# scalars:
+#   Upload: File
+# type UploadFileResponse {
+#   success: Boolean!
+#   message: String
+# }
+
+# type Mutation {
+#   uploadFile(file: Upload!): UploadFileResponse!
+# }
+scalar Upload
+
+mutation UploadFileApi($file: Upload!) {
+  uploadFile(file: $file)
+}
