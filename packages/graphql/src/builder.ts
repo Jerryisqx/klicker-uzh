@@ -7,6 +7,7 @@ import ScopeAuthPlugin from '@pothos/plugin-scope-auth'
 import ZodPlugin from '@pothos/plugin-zod'
 import { GraphQLError } from 'graphql'
 import { DateTimeResolver, JSONResolver } from 'graphql-scalars'
+import { GraphQLUpload } from 'graphql-upload-minimal'
 import './types/app.js'
 
 import type { Context, ContextWithUser } from './lib/context.js'
@@ -44,6 +45,10 @@ const builder = new SchemaBuilder<{
     Json: {
       Input: any
       Output: any
+    }
+    Upload: {
+      Input: File
+      Output: File
     }
   }
 }>({
@@ -110,5 +115,6 @@ const builder = new SchemaBuilder<{
 
 export const DateScalar = builder.addScalarType('Date', DateTimeResolver, {})
 export const JsonScalar = builder.addScalarType('Json', JSONResolver, {})
+export const UploadScalar = builder.addScalarType('Upload', GraphQLUpload, {})
 
 export default builder

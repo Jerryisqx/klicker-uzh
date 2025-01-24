@@ -43,11 +43,11 @@ import {
 import {
   ArchivedElement,
   Element,
-  RateQuestion,
   OptionsChoicesInput,
   OptionsFreeTextInput,
   OptionsNumericalInput,
   QuestionOrElementInstance,
+  RateQuestion,
   Tag,
 } from './question.js'
 import { ElementStatus, ElementType } from './questionData.js'
@@ -77,7 +77,7 @@ export const Mutation = builder.mutationType({
     }
     const asUserFullAccess = { ...asUser, scope: DB.UserLoginScope.FULL_ACCESS }
     const asUserOwner = { ...asUser, scope: DB.UserLoginScope.ACCOUNT_OWNER }
-    
+
     return {
       // ----- ANONYMOUS OPERATIONS -----
       // #region
@@ -587,14 +587,12 @@ export const Mutation = builder.mutationType({
           typeRate: t.arg.int({ required: true }),
           relevance: t.arg.int({ required: true }),
           ambiguity: t.arg.int({ required: true }),
-
         },
         resolve: (_, args, ctx) => {
-          return QuestionService.rateQuestion(args, ctx);
+          return QuestionService.rateQuestion(args, ctx)
         },
       }),
-      
-      
+
       deleteParticipantAccount: t.withAuth(asParticipant).boolean({
         nullable: true,
         resolve(_, __, ctx) {
@@ -1555,7 +1553,7 @@ export const Mutation = builder.mutationType({
           return AccountService.deleteUserLogin(args, ctx)
         },
       }),
-      
+
       // generateQuestion: t.withAuth(asUser).field({
       //   nullable: true,
       //   type: Element,
@@ -1587,13 +1585,30 @@ export const Mutation = builder.mutationType({
           const response = await QuestionService.GenerateQuestionsAPI(args, ctx)
           if (response?.ok == true) {
             return true
-          }
-          else {
+          } else {
             return false
           }
-        }
-      })
-      // #endregion
+        },
+      }),
+
+      uploadFile: t.withAuth(asUser).boolean({
+        nullable: true,
+        args: {
+          file: t.arg({
+            type: 'Upload',
+            required: true,
+          }),
+        },
+        resolve: async (_, args, ctx) => {
+          // const formData = new FormData()
+          const response = await QuestionService.UploadFileAPI(args, ctx)
+          if (response?.ok == true) {
+            return true
+          } else {
+            return false
+          }
+        },
+      }),
     }
   },
 })

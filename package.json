@@ -92,5 +92,10 @@
     "node": "20.17.0",
     "pnpm": "9.10.0"
   },
-  "packageManager": "pnpm@9.10.0"
+  "packageManager": "pnpm@9.10.0",
+  "dependencies": {
+    "graphql-scalar": "^0.1.0",
+    "graphql-upload": "^17.0.0",
+    "graphql-upload-minimal": "^1.6.1"
+  }
 }

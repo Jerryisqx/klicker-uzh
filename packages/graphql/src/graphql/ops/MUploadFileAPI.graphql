@@ -1,0 +1,5 @@
+scalar Upload
+
+mutation UploadFileApi($file: Upload!) {
+  uploadFile(file: $file)
+}
