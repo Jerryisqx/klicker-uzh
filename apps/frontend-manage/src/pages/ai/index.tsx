@@ -223,6 +223,15 @@ export default function Home() {
   //   }
   // }
 
+  const fileToBase64 = (file: File) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = (error) => reject(error)
+    })
+  }
+
   const handleFileUpload = async () => {
     if (!selectedFile || !fileChanged) {
       setUploadError(t('manage.aiRelate.noFileSelected'))
@@ -234,17 +243,19 @@ export default function Home() {
     setUploadError(null)
     setUploadSuccess(null)
 
-    const formData = new FormData()
-    formData.append('file', selectedFile)
+    // const formData = new FormData()
+    // formData.append('file', selectedFile)
 
     try {
       // const response = await fetch('https://manage.klicker-mp.bf-app.ch/ai/upload', {
       //   method: 'POST',
       //   body: formData,
       // })
+      const base64String = await fileToBase64(selectedFile)
       const response = await uploadFile({
         variables: {
-          file: formData,
+          file: base64String as string,
+          filename: selectedFile.name,
         },
       })
 

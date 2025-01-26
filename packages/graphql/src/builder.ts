@@ -46,7 +46,7 @@ const builder = new SchemaBuilder<{
       Input: any
       Output: any
     }
-    Upload: {
+    File: {
       Input: File
       Output: File
     }
@@ -115,6 +115,6 @@ const builder = new SchemaBuilder<{
 
 export const DateScalar = builder.addScalarType('Date', DateTimeResolver, {})
 export const JsonScalar = builder.addScalarType('Json', JSONResolver, {})
-export const UploadScalar = builder.addScalarType('Upload', GraphQLUpload, {})
+export const FileScalar = builder.addScalarType('File', GraphQLUpload, {})
 
 export default builder

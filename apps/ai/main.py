@@ -17,6 +17,7 @@ from prisma import Prisma
 import asyncio
 from datetime import timedelta
 import hashlib
+import base64
 from parse_questions import parse_question
 
 logging.basicConfig(level=logging.INFO)
@@ -97,6 +98,9 @@ class GenerateQuestionsRequest(BaseModel):
     #         )
     #     return value
 
+class FileUploadRequest(BaseModel):
+    file: str
+    filename: str
 
 # Function to validate file type
 def validate_file_type(file: UploadFile):
@@ -161,7 +165,7 @@ async def insert_questions_to_db(questions):
         raise
 
 
-@app.post("/generate/")
+@app.post("/generate")
 async def generate_questions(request: GenerateQuestionsRequest):
     questions_number = request.limit
     language = request.language
@@ -279,45 +283,50 @@ async def generate_questions(request: GenerateQuestionsRequest):
 
 
 # Receive PDF file and save it into /tmp folder
-@app.post("/upload/")
-async def upload_pdf(file: UploadFile = File(...)):
-    input_bytes = await file.read()
-    filename = str(file.filename)
-    buf = BytesIO(input_bytes)
+@app.post("/upload")
+async def upload_pdf(request: FileUploadRequest):
+    try:
+        print('start')
+        # input_bytes = await file.read()
+        input_bytes = base64.b64decode(request.file.split(',')[1] if ',' in request.file else request.file)
+        # filename = str(file.filename)
+        filename = request.filename
+        buf = BytesIO(input_bytes)
 
-    if input_bytes == None:
-        logging.error("No upload file found.")
-        return {"message": "Upload not successful"}
+        if input_bytes == None:
+            logging.error("No upload file found.")
+            return {"message": "Upload not successful"}
 
-    if (
-        redis_cache.exists("filename") == 1
-        and redis_cache.get("filename").decode("utf-8") == filename
-    ):
+        if (
+            redis_cache.exists("filename") == 1
+            and redis_cache.get("filename").decode("utf-8") == filename
+        ):
+            document_store = DocumentStore(filename).get_store()
+            if document_store.count_documents() != 0:
+                logging.info("Uploaded file in cache, using cached data ...")
+                return {"message": "Upload successful"}
+        elif (
+            redis_cache.exists("filename") == 1
+            and redis_cache.get("filename").decode("utf-8") != filename
+        ):
+            logging.info("Found unused cached memory, deleting first ...")
+            DocumentStore(redis_cache.get("filename")).delete()
+
         document_store = DocumentStore(filename).get_store()
-        if document_store.count_documents() != 0:
-            logging.info("Uploaded file in cache, using cached data ...")
-            return {"message": "Upload successful"}
-    elif (
-        redis_cache.exists("filename") == 1
-        and redis_cache.get("filename").decode("utf-8") != filename
-    ):
-        logging.info("Found unused cached memory, deleting first ...")
-        DocumentStore(redis_cache.get("filename")).delete()
+        DocConveter = Converter(buf, filename, document_store)
+        ids = DocConveter.convert()
 
-    document_store = DocumentStore(filename).get_store()
-    DocConveter = Converter(buf, filename, document_store)
-    ids = DocConveter.convert()
-
-    upload_pipe = redis_cache.pipeline()
-    upload_pipe.set("filename", filename)
-    upload_pipe.set("document_store", 1)
-    upload_pipe.set("agent_status", 0)
-    for i_d in ids:
-        upload_pipe.rpush("document_id", i_d)
-    upload_pipe.execute()
-    logging.info("Upload successfully")
-    return {"message": "Upload successful"}
-
+        upload_pipe = redis_cache.pipeline()
+        upload_pipe.set("filename", filename)
+        upload_pipe.set("document_store", 1)
+        upload_pipe.set("agent_status", 0)
+        for i_d in ids:
+            upload_pipe.rpush("document_id", i_d)
+        upload_pipe.execute()
+        logging.info("Upload successfully")
+        return {"message": "Upload successful"}
+    except:
+        return {"message": "problem"}
 
 @app.on_event("startup")
 async def startup_event():

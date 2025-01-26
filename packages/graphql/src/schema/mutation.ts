@@ -1594,10 +1594,8 @@ export const Mutation = builder.mutationType({
       uploadFile: t.withAuth(asUser).boolean({
         nullable: true,
         args: {
-          file: t.arg({
-            type: 'Upload',
-            required: true,
-          }),
+          file: t.arg.string({ required: true }),
+          filename: t.arg.string({ required: true }),
         },
         resolve: async (_, args, ctx) => {
           // const formData = new FormData()

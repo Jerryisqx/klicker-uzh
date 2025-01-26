@@ -1,5 +1,3 @@
-scalar Upload
-
-mutation UploadFileApi($file: Upload!) {
-  uploadFile(file: $file)
+mutation UploadFileAPI($file: String!, $filename: String!) {
+  uploadFile(file: $file, filename: $filename)
 }
