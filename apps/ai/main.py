@@ -19,7 +19,7 @@ from datetime import timedelta
 import hashlib
 import base64
 from parse_questions import parse_question
-
+# os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 # database_url = os.getenv("DATABASE_URL_1")
@@ -286,12 +286,43 @@ async def generate_questions(request: GenerateQuestionsRequest):
 @app.post("/upload")
 async def upload_pdf(request: FileUploadRequest):
     try:
+        logging.info(f"Received upload request for file: {request.filename}")
+        logging.info(f"Received file content preview: {request.file[:50]}...")  # 只显示前50个字符
         print('start')
         # input_bytes = await file.read()
-        input_bytes = base64.b64decode(request.file.split(',')[1] if ',' in request.file else request.file)
         # filename = str(file.filename)
+        # input_bytes = base64.b64decode(request.file.split(',')[1] if ',' in request.file else request.file)
+        # filename = request.filename
+        # buf = BytesIO(input_bytes)
+        # 解码操作
+        if ',' in request.file:
+            # 如果是 DataURL 格式 (data:application/pdf;base64,...)
+            base64_content = request.file.split(',')[1]
+            logging.info("Found DataURL format, splitting content")
+        else:
+            base64_content = request.file
+            logging.info("Using raw base64 content")
+            
+        input_bytes = base64.b64decode(base64_content)
+        
+        # 检查 PDF 格式
+        logging.info(f"First 20 bytes of decoded content: {input_bytes[:20]}")
+        if input_bytes[:4] == b'%PDF':
+            logging.info(f"PDF version: {input_bytes[5:8].decode('utf-8', errors='ignore')}")
+            logging.info("Valid PDF header detected")
+        else:
+            logging.error(f"Invalid PDF header. First 4 bytes: {input_bytes[:4]}")
+            
+        # 检查文件大小
+        logging.info(f"Decoded file size: {len(input_bytes)} bytes")
+        
         filename = request.filename
         buf = BytesIO(input_bytes)
+        
+        # 验证 BytesIO 对象
+        buf_content_start = buf.read(4)
+        buf.seek(0)  # 重置读取位置
+        logging.info(f"BytesIO content starts with: {buf_content_start}")
 
         if input_bytes == None:
             logging.error("No upload file found.")
@@ -312,19 +343,63 @@ async def upload_pdf(request: FileUploadRequest):
             logging.info("Found unused cached memory, deleting first ...")
             DocumentStore(redis_cache.get("filename")).delete()
 
-        document_store = DocumentStore(filename).get_store()
-        DocConveter = Converter(buf, filename, document_store)
-        ids = DocConveter.convert()
+        try:
+            logging.info("Starting document store creation...")
+            document_store = DocumentStore(filename).get_store()
+            logging.info("Document store created successfully")
+            
+            logging.info("Initializing document converter...")
+            DocConveter = Converter(buf, filename, document_store)
+            logging.info("Document converter initialized")
+            
+            try:
+                logging.info("Starting document conversion...")
+                ids = DocConveter.convert()
+                logging.info(f"Document conversion completed. Number of document IDs: {len(ids)}")
+            except Exception as convert_error:
+                logging.error(f"Error during document conversion: {str(convert_error)}")
+                logging.error(f"Error type: {type(convert_error)}")
+                import traceback
+                logging.error(f"Conversion error traceback: {traceback.format_exc()}")
+                raise convert_error
+                
+            logging.info("Document conversion successful, proceeding with Redis operations...")
+            
+            try:
+                # 尝试获取文档内容示例
+                if ids:
+                    sample_doc = document_store.get_document_by_id(ids[0])
+                    logging.info(f"Sample document content type: {type(sample_doc)}")
+                    logging.info(f"Sample document preview: {str(sample_doc)[:200]}...")  # 只显示前200个字符
+            except Exception as e:
+                logging.error(f"Error getting document sample: {str(e)}")
+            
+            logging.info("Starting Redis pipeline operations...")
+            upload_pipe = redis_cache.pipeline()
+            upload_pipe.set("filename", filename)
+            upload_pipe.set("document_store", 1)
+            upload_pipe.set("agent_status", 0)
+            for i_d in ids:
+                upload_pipe.rpush("document_id", i_d)
+            upload_pipe.execute()
 
-        upload_pipe = redis_cache.pipeline()
-        upload_pipe.set("filename", filename)
-        upload_pipe.set("document_store", 1)
-        upload_pipe.set("agent_status", 0)
-        for i_d in ids:
-            upload_pipe.rpush("document_id", i_d)
-        upload_pipe.execute()
-        logging.info("Upload successfully")
-        return {"message": "Upload successful"}
+            
+            logging.info("Verifying Redis data after upload:")
+            logging.info(f"filename exists: {redis_cache.exists('filename')}")
+            logging.info(f"document_store exists: {redis_cache.exists('document_store')}")
+            logging.info(f"agent_status exists: {redis_cache.exists('agent_status')}")
+            logging.info(f"document_id exists: {redis_cache.exists('document_id')}")
+
+            if redis_cache.exists('filename'):
+                logging.info(f"Stored filename: {redis_cache.get('filename').decode('utf-8')}")
+            logging.info("Upload successfully")
+            return {"message": "Upload successful"}
+        except Exception as e:
+            logging.error(f"Document processing error: {str(e)}")
+            logging.error(f"Error type: {type(e)}")
+            import traceback
+            logging.error(f"Processing error traceback: {traceback.format_exc()}")
+            return {"message": f"Document processing failed: {str(e)}"}
     except:
         return {"message": "problem"}
 
