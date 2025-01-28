@@ -4,8 +4,7 @@
   - You are about to drop the column `elementGeneratedId` on the `ElementFeedback` table. All the data in the column will be lost.
   - You are about to drop the column `isArchived` on the `ElementGenerated` table. All the data in the column will be lost.
   - You are about to drop the column `isDeleted` on the `ElementGenerated` table. All the data in the column will be lost.
-  - You are about to drop the column `pointsMultiplier` on the `ElementGenerated` table. All the data in the column will be lost.
-  - You are about to drop the column `status` on the `ElementGenerated` table. All the data in the column will be lost.
+  - You are about to drop the column `score` on the `ElementGenerated` table. All the data in the column will be lost.
   - You are about to drop the column `version` on the `ElementGenerated` table. All the data in the column will be lost.
   - You are about to drop the column `elementGeneratedId` on the `ElementInstance` table. All the data in the column will be lost.
   - You are about to drop the column `generateQuestionId` on the `QuestionInstance` table. All the data in the column will be lost.
@@ -34,15 +33,13 @@ ALTER TABLE "ElementFeedback" DROP COLUMN "elementGeneratedId";
 -- AlterTable
 ALTER TABLE "ElementGenerated" DROP COLUMN "isArchived",
 DROP COLUMN "isDeleted",
-DROP COLUMN "pointsMultiplier",
-DROP COLUMN "status",
+DROP COLUMN "score",
 DROP COLUMN "version",
+ADD COLUMN     "ambiguity" INTEGER,
 ADD COLUMN     "difficultyRate" INTEGER,
-ADD COLUMN     "helpfulness" INTEGER,
+ADD COLUMN     "factualCorrectness" INTEGER,
 ADD COLUMN     "relevance" INTEGER,
 ADD COLUMN     "typeRate" INTEGER,
-ALTER COLUMN "score" DROP NOT NULL,
-ALTER COLUMN "score" DROP DEFAULT,
 DROP COLUMN "difficulty",
 ADD COLUMN     "difficulty" TEXT NOT NULL;
 

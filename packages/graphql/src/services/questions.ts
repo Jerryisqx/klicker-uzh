@@ -35,7 +35,7 @@ export async function GenerateQuestionsAPI(
 ) {
   //call python api
   try {
-    const response = await fetch('http://localhost:8000/generate', {
+    const response = await fetch(process.env.AI_GENERATE_URL as string, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,7 +62,8 @@ export async function UploadFileAPI(
   ctx
 ) {
   try {
-    const response = await fetch('http://localhost:8000/upload', {
+    console.log('Environment FILE_UPLOAD_URL:', process.env.FILE_UPLOAD_URL)
+    const response = await fetch(process.env.FILE_UPLOAD_URL as string, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

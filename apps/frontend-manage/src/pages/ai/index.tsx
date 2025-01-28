@@ -45,6 +45,7 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadSuccess, setUploadSuccess] = useState<boolean | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const [activeTab, setActiveTab] = useState<'generating' | 'history'>(
     'generating'
   )
@@ -242,7 +243,7 @@ export default function Home() {
 
     setUploadError(null)
     setUploadSuccess(null)
-
+    setIsUploading(true)
     // const formData = new FormData()
     // formData.append('file', selectedFile)
 
@@ -262,8 +263,8 @@ export default function Home() {
       if (response.data) {
         console.log('File successfully uploaded')
         setUploadSuccess(true)
-        setUploadError(null) // 清除之前的错误信息
-        setIsFileUploaded(true) // 设置文件上传成功标志位
+        setUploadError(null) 
+        setIsFileUploaded(true) 
         setSelectedFile(null)
       } else {
         const errorMessage = await response.data
@@ -277,6 +278,8 @@ export default function Home() {
         `${error instanceof Error ? error.message : 'An unexpected error occurred'}. Please retry.`
       )
       setUploadSuccess(false)
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -347,6 +350,7 @@ export default function Home() {
               </Button>
 
               {/*Notification of file upload status*/}
+              {isUploading && <Loader />}
               {uploadError && (
                 <Label
                   label={`${t('shared.generic.error')}: ${uploadError}`}

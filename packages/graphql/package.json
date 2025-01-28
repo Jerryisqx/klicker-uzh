@@ -87,7 +87,7 @@
     "dev": "npm-run-all --parallel dev:graphql dev:ts",
     "dev:doppler": "doppler run --config dev -- pnpm run dev",
     "dev:graphql": "doppler run --config dev -- graphql-codegen --config codegen.ts --watch 'src/**.graphql' --watch 'src/**.ts'",
-    "dev:offline": "pnpm run dev",
+    "dev:offline": "doppler run --config dev -- pnpm run dev",
     "dev:test": "pnpm run dev",
     "dev:ts": "cross-env NODE_ENV=development doppler run --config dev -- rollup -c --watch",
     "generate": "graphql-codegen --config codegen.ts",
