@@ -5,7 +5,6 @@ from typing import Optional, List
 import re
 
 
-# 定义验证模型
 class Choice(BaseModel):
     ix: int  # Option index
     value: str  # Option content
@@ -101,7 +100,7 @@ class Back(BaseModel):
 def parse_question(generated_text, num):
     context = re.sub(r"```json|```", "", generated_text).strip()
     context = re.sub(r"\*", "", context).strip()
-    context = re.sub(r'\$(.*?)\$', r'$$\1$$', context)
+    context = re.sub(r"\$(.*?)\$", r"$$\1$$", context)
     context = context.replace(r"\\\(", "$$").replace(r"\\\)", "$$")
 
     # context= context.replace("\n", "\\n").replace("\r", "\\r")

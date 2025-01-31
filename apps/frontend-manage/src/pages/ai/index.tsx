@@ -120,7 +120,7 @@ export default function Home() {
     if (!isFileUploaded) {
       setGenerateError(t('manage.aiRelate.noFileSelected'))
       setQuestionsGenerated(false)
-      return // 停止调用 API
+      return 
     }
 
     // const validationErrors = validateSelections()
@@ -183,41 +183,41 @@ export default function Home() {
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // 清空状态
+   
     setUploadSuccess(null)
     setUploadError(null)
 
     if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0]
 
-      // 检查是否为相同文件
+      
       if (
         selectedFile &&
         selectedFile.name === file.name &&
         selectedFile.size === file.size
       ) {
-        // 文件未更改，但允许重新上传
+        
         setFileChanged(false)
-        setSelectedFile(file) // 保留相同文件
-        setIsFileUploaded(false) // 重置上传状态，允许重新上传
+        setSelectedFile(file) 
+        setIsFileUploaded(false) 
       } else {
-        // 文件已更改
+        
         setSelectedFile(file)
-        setFileChanged(true) // 标记文件已更改
-        setIsFileUploaded(false) // 重置上传状态
+        setFileChanged(true) 
+        setIsFileUploaded(false) 
       }
     } else {
-      // 如果 files 为 null 或为空数组，表示用户未选择文件
+      
       setSelectedFile(null)
       setFileChanged(false)
-      setUploadError(t('manage.aiRelate.noFileSelected')) // 提示未选择文件
+      setUploadError(t('manage.aiRelate.noFileSelected')) 
     }
   }
 
   // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 
   //   const fileInput = event.target;
-  //   fileInput.value = ''; // 清空文件输入框，以便用户可以重新选择相同文件
+  //   fileInput.value = ''; 
   //   if (event.target.files && event.target.files.length > 0) {
   //     setSelectedFile(event.target.files[0])
   //     setUploadSuccess(null)

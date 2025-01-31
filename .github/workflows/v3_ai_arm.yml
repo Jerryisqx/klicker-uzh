@@ -1,4 +1,4 @@
-name: Build Docker image for AI service
+name: Build Docker image for AI service arm
 
 on:
   push:
