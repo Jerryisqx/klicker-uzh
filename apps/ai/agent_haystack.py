@@ -285,13 +285,13 @@ class Agent_stage2:
         # else:
         #     self.api_key = os.getenv("TOGETHER_API_KEY")
         #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
-        # self.tracer = LangfuseConnector("Basic RAG Pipeline")
+        self.tracer = LangfuseConnector("Basic RAG Pipeline")
         self.generated_content = ""
         self.prompt_builder = PromptBuilder(template=self.template)
         self.answer_builder = AnswerBuilder()
 
         # Add components to your pipeline
-        # self.rag_pipeline.add_component("tracer", self.tracer)
+        self.rag_pipeline.add_component("tracer", self.tracer)
         self.rag_pipeline.add_component("retriever", self.retriever)
         self.rag_pipeline.add_component("prompt_builder", self.prompt_builder)
         self.rag_pipeline.add_component("llm", self.generator)
