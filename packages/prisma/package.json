@@ -57,6 +57,7 @@
     "prisma:push:raw": "prisma db push --schema=src/prisma/schema",
     "prisma:reset": "doppler run --config dev -- pnpm run prisma:reset:raw",
     "prisma:reset:qa": "doppler run --config stg -- pnpm run prisma:reset:raw",
+    "prisma:reset:mp": "doppler run --config mp -- pnpm run prisma:reset:raw",
     "prisma:reset:raw": "prisma migrate reset --schema=src/prisma/schema --skip-seed",
     "prisma:reset:seed": "doppler run --config dev -- prisma migrate reset --schema=src/prisma/schema",
     "prisma:reset:yes": "doppler run --config dev -- pnpm run prisma:reset:raw -f",
