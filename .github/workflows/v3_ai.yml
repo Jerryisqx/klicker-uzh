@@ -3,8 +3,7 @@ name: Build Docker image for AI service
 on:
   push:
     branches:
-      - 'v3'
-      - 'v3*'
+      - 'v3-ai-dev'
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:

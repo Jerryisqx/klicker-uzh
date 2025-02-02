@@ -3,8 +3,7 @@ name: Build Docker image for auth (MP)
 on:
   push:
     branches:
-      - 'v3'
-      - 'v3*'
+      - 'v3-ai-dev'
   pull_request:
     # branches: [ "v3" ]
     types: [opened, synchronize, reopened, ready_for_review]
