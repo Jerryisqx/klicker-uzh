@@ -27,7 +27,7 @@ from haystack import component
 os.environ["LANGFUSE_HOST"] = "https://cloud.langfuse.com"  # 🇪🇺 EU region
 
 # Enable Haystack content tracing
-os.environ["HAYSTACK_CONTENT_TRACING _ENABLED"] = "True"
+os.environ["HAYSTACK_CONTENT_TRACING_ENABLED"] = "True"
 
 from pathlib import Path
 from getpass import getpass
@@ -210,7 +210,7 @@ class Agent_stage1:
             self.generator = OpenAIGenerator(model="gpt-4o-2024-11-20")
         else:
             self.api_key = os.getenv("ANTHROPIC_API_KEY")
-            self.generator = AnthropicGenerator(model="claude-3-haiku-20240307")
+            self.generator = AnthropicGenerator(model="claude-3-5-sonnet-20241022")
         self.prompt_builder = PromptBuilder(template=self.template)
         self.answer_builder = AnswerBuilder()
         self.rag_pipeline = Pipeline()
@@ -278,7 +278,7 @@ class Agent_stage2:
             self.generator = OpenAIGenerator(model="gpt-4o-2024-11-20")
         else:
             self.api_key = os.getenv("ANTHROPIC_API_KEY")
-            self.generator = AnthropicGenerator(model="claude-3-haiku-20240307")
+            self.generator = AnthropicGenerator(model="claude-3-5-sonnet-20241022")
         # elif model=='Llama':
         #     self.api_key = os.getenv("LLAMA_API_KEY")
         #     self.generator = HuggingFaceAPIGenerator(api_type="text_generation_inference", api_params={"model_name": "meta-llama/Meta-Llama-3-8B"})
