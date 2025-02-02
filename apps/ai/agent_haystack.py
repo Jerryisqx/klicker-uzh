@@ -78,10 +78,14 @@ from haystack_integrations.components.generators.google_ai import (
 redis_cache_host = os.getenv("REDIS_CACHE_HOST")
 redis_cache_port = int(os.getenv("REDIS_CACHE_PORT"))
 redis_cache_pass = os.getenv("REDIS_CACHE_PASS")
+redis_cache_ssl = os.getenv("REDIS_CACHE_TLS")
 
 
 redis_cache = redis.Redis(
-    host=redis_cache_host, port=redis_cache_port, password=redis_cache_pass
+    host=redis_cache_host,
+    port=redis_cache_port,
+    password=redis_cache_pass,
+    ssl=redis_cache_ssl,
 )
 
 
