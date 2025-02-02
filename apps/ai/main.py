@@ -40,11 +40,17 @@ app.add_middleware(
 redis_cache_host = os.getenv("REDIS_CACHE_HOST")
 redis_cache_port = int(os.getenv("REDIS_CACHE_PORT"))
 redis_cache_pass = os.getenv("REDIS_CACHE_PASS")
-
+redis_cache_ssl = os.getenv("REDIS_CACHE_TLS", "").lower() == "true"
 
 redis_cache = redis.Redis(
-    host=redis_cache_host, port=redis_cache_port, password=redis_cache_pass
+    host=redis_cache_host,
+    port=redis_cache_port,
+    password=redis_cache_pass,
+    ssl=redis_cache_ssl,
 )
+
+redis_cache.ping()
+
 # redis_cache = redis.Redis(host="redis_cache", port=6379)
 # redis_cache = redis.Redis(host=REDIS_CACHE_HOST, port=REDIS_CACHE_PORT, password=REDIS_CACHE_PASS)
 

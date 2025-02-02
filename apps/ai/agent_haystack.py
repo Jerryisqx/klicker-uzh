@@ -78,7 +78,7 @@ from haystack_integrations.components.generators.google_ai import (
 redis_cache_host = os.getenv("REDIS_CACHE_HOST")
 redis_cache_port = int(os.getenv("REDIS_CACHE_PORT"))
 redis_cache_pass = os.getenv("REDIS_CACHE_PASS")
-redis_cache_ssl = os.getenv("REDIS_CACHE_TLS")
+redis_cache_ssl = os.getenv("REDIS_CACHE_TLS", "").lower() == "true"
 
 
 redis_cache = redis.Redis(
@@ -87,6 +87,8 @@ redis_cache = redis.Redis(
     password=redis_cache_pass,
     ssl=redis_cache_ssl,
 )
+
+redis_cache.ping()
 
 
 class DocumentStore:
