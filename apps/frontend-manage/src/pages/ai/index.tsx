@@ -57,7 +57,13 @@ export default function Home() {
   const itemsPerPage = 10 // number of question displayed per page
 
   const [generatedQuestion] = useMutation(GenerateQuestionsApiDocument)
-  const [uploadFile] = useMutation(UploadFileApiDocument)
+  const [uploadFile] = useMutation(UploadFileApiDocument, {
+    onError: (error) => {
+      console.error('GraphQL error:', error)
+      setUploadError(error.message)
+      setUploadSuccess(false)
+    },
+  })
 
   const {
     loading: loadingQuestions,
@@ -120,7 +126,7 @@ export default function Home() {
     if (!isFileUploaded) {
       setGenerateError(t('manage.aiRelate.noFileSelected'))
       setQuestionsGenerated(false)
-      return 
+      return
     }
 
     // const validationErrors = validateSelections()
@@ -183,41 +189,36 @@ export default function Home() {
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-   
     setUploadSuccess(null)
     setUploadError(null)
 
     if (event.target.files && event.target.files.length > 0) {
       const file = event.target.files[0]
 
-      
       if (
         selectedFile &&
         selectedFile.name === file.name &&
         selectedFile.size === file.size
       ) {
-        
         setFileChanged(false)
-        setSelectedFile(file) 
-        setIsFileUploaded(false) 
-      } else {
-        
         setSelectedFile(file)
-        setFileChanged(true) 
-        setIsFileUploaded(false) 
+        setIsFileUploaded(false)
+      } else {
+        setSelectedFile(file)
+        setFileChanged(true)
+        setIsFileUploaded(false)
       }
     } else {
-      
       setSelectedFile(null)
       setFileChanged(false)
-      setUploadError(t('manage.aiRelate.noFileSelected')) 
+      setUploadError(t('manage.aiRelate.noFileSelected'))
     }
   }
 
   // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 
   //   const fileInput = event.target;
-  //   fileInput.value = ''; 
+  //   fileInput.value = '';
   //   if (event.target.files && event.target.files.length > 0) {
   //     setSelectedFile(event.target.files[0])
   //     setUploadSuccess(null)
@@ -234,7 +235,7 @@ export default function Home() {
   }
 
   const handleFileUpload = async () => {
-    if (!selectedFile || !fileChanged) {
+    if (!selectedFile) {
       setUploadError(t('manage.aiRelate.noFileSelected'))
       setUploadSuccess(null)
       setIsFileUploaded(false)
@@ -260,24 +261,30 @@ export default function Home() {
         },
       })
 
-      if (response.data) {
-        console.log('File successfully uploaded')
-        setUploadSuccess(true)
-        setUploadError(null) 
-        setIsFileUploaded(true) 
-        setSelectedFile(null)
-      } else {
-        const errorMessage = await response.data
-        setUploadError(errorMessage || t('manage.aiRelate.fileFail'))
-        setUploadSuccess(null)
+      // If the data structure is unexpected, considerd as false
+      if (response.errors || !response.data || !response.data.uploadFile) {
+        // can be modified later
+        const errorMessage = response.errors
+          ? response.errors.map((e) => e.message).join(', ')
+          : t('manage.aiRelate.fileFail')
+        // Set error message
+        setUploadError(errorMessage)
+        setUploadSuccess(false)
         setIsFileUploaded(false)
+        return
       }
+
+      console.log('File successfully uploaded')
+      setUploadSuccess(true)
+      setUploadError(null)
+      setIsFileUploaded(true)
     } catch (error) {
       console.error('Error uploading file:', error)
       setUploadError(
         `${error instanceof Error ? error.message : 'An unexpected error occurred'}. Please retry.`
       )
       setUploadSuccess(false)
+      setIsFileUploaded(false)
     } finally {
       setIsUploading(false)
     }
