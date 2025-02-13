@@ -18,6 +18,7 @@ import asyncio
 from datetime import timedelta
 import hashlib
 import base64
+import traceback
 from parse_questions import parse_question
 
 # os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
@@ -302,127 +303,104 @@ async def upload_pdf(request: FileUploadRequest):
         logging.info(f"Received upload request for file: {request.filename}")
         logging.info(f"Received file content preview: {request.file[:50]}...")
         print("start")
-        # input_bytes = await file.read()
-        # filename = str(file.filename)
-        # input_bytes = base64.b64decode(request.file.split(',')[1] if ',' in request.file else request.file)
-        # filename = request.filename
-        # buf = BytesIO(input_bytes)
 
-        if "," in request.file:
+        # Validate file content
+        if not request.file:
+            logging.error("No file content provided.")
+            return {"message": "Upload failed: No file content provided."}
 
-            base64_content = request.file.split(",")[1]
-            logging.info("Found DataURL format, splitting content")
-        else:
-            base64_content = request.file
-            logging.info("Using raw base64 content")
+        # Parse Base64 file content
+        try:
+            if "," in request.file:
+                base64_content = request.file.split(",")[1]
+                logging.info("Found DataURL format, splitting content")
+            else:
+                base64_content = request.file
+                logging.info("Using raw base64 content")
 
-        input_bytes = base64.b64decode(base64_content)
+            input_bytes = base64.b64decode(base64_content)
+            logging.info(f"Decoded file size: {len(input_bytes)} bytes")
+        except Exception as e:
+            logging.error(f"Error decoding base64 content: {str(e)}")
+            return {"message": "Upload failed: Invalid file content."}
 
-        logging.info(f"First 20 bytes of decoded content: {input_bytes[:20]}")
-        if input_bytes[:4] == b"%PDF":
-            logging.info(
-                f"PDF version: {input_bytes[5:8].decode('utf-8', errors='ignore')}"
-            )
-            logging.info("Valid PDF header detected")
-        else:
-            logging.error(f"Invalid PDF header. First 4 bytes: {input_bytes[:4]}")
+        # Validate file header (for PDF)
+        if input_bytes[:4] != b"%PDF":
+            logging.error(f"Invalid file header. First 4 bytes: {input_bytes[:4]}")
+            return {"message": "Upload failed: Invalid file format (not a PDF)."}
 
-        logging.info(f"Decoded file size: {len(input_bytes)} bytes")
-
+        # Initialize file information
         filename = request.filename
         buf = BytesIO(input_bytes)
 
-        buf_content_start = buf.read(4)
-        buf.seek(0)
-        logging.info(f"BytesIO content starts with: {buf_content_start}")
-
-        if input_bytes == None:
-            logging.error("No upload file found.")
-            return {"message": "Upload not successful"}
-
-        if (
-            redis_cache.exists("filename") == 1
-            and redis_cache.get("filename").decode("utf-8") == filename
-        ):
+        # Check Redis cache for existing file
+        cached_filename = redis_cache.get("filename")
+        if cached_filename and cached_filename.decode("utf-8") == filename:
             document_store = DocumentStore(filename).get_store()
-            if document_store.count_documents() != 0:
-                logging.info("Uploaded file in cache, using cached data ...")
-                return {"message": "Upload successful"}
-        elif (
-            redis_cache.exists("filename") == 1
-            and redis_cache.get("filename").decode("utf-8") != filename
-        ):
-            logging.info("Found unused cached memory, deleting first ...")
-            DocumentStore(redis_cache.get("filename")).delete()
+            if document_store.count_documents() > 0:
+                logging.info("Uploaded file found in cache, using cached data.")
+                return {"message": "Upload successful (cached)."}
+        elif cached_filename:
+            logging.info("Found unused cached memory, deleting first...")
+            DocumentStore(cached_filename.decode("utf-8")).delete()
 
         try:
-            logging.info("Starting document store creation...")
+            # Create Document Store
+            logging.info("Creating document store...")
             document_store = DocumentStore(filename).get_store()
-            logging.info("Document store created successfully")
+            logging.info("Document store created successfully.")
 
+            # Initialize and use Converter
             logging.info("Initializing document converter...")
-            DocConveter = Converter(buf, filename, document_store)
-            logging.info("Document converter initialized")
+            doc_converter = Converter(buf, filename, document_store)
+            logging.info("Document converter initialized.")
 
-            try:
-                logging.info("Starting document conversion...")
-                ids = DocConveter.convert()
-                logging.info(
-                    f"Document conversion completed. Number of document IDs: {len(ids)}"
-                )
-            except Exception as convert_error:
-                logging.error(f"Error during document conversion: {str(convert_error)}")
-                logging.error(f"Error type: {type(convert_error)}")
-                import traceback
+            # Convert document
+            logging.info("Starting document conversion...")
+            ids = doc_converter.convert()
+            if not ids:
+                logging.error("Document conversion failed, no IDs returned.")
+                return {"message": "Document processing failed."}
 
-                logging.error(f"Conversion error traceback: {traceback.format_exc()}")
-                raise convert_error
+            chunk_id = ids[0]
+            logging.info(f"Document conversion completed. Document ID: {chunk_id}")
 
-            logging.info(
-                "Document conversion successful, proceeding with Redis operations..."
-            )
+            # Verify stored document
+    #         try:
+    #             documents = list(document_store.get_all_documents_generator())  # Convert generator to list
+    # # Find the document with the matching ID
+    #             sample_doc = next((doc for doc in documents if doc.id == chunk_id), None)
+    #             logging.info(f"Sample document preview: {str(sample_doc)[:200]}...")
+    #         except Exception as e:
+    #             logging.error(f"Error retrieving document sample: {str(e)}")
+    #             return {"message": "Document processing failed: Unable to retrieve document."}
 
-            try:
-
-                if ids:
-                    sample_doc = document_store.get_document_by_id(ids[0])
-                    logging.info(f"Sample document content type: {type(sample_doc)}")
-                    logging.info(f"Sample document preview: {str(sample_doc)[:200]}...")
-            except Exception as e:
-                logging.error(f"Error getting document sample: {str(e)}")
-
-            logging.info("Starting Redis pipeline operations...")
+            # Update Redis cache
+            logging.info("Updating Redis cache...")
             upload_pipe = redis_cache.pipeline()
             upload_pipe.set("filename", filename)
             upload_pipe.set("document_store", 1)
             upload_pipe.set("agent_status", 0)
-            for i_d in ids:
-                upload_pipe.rpush("document_id", i_d)
+            upload_pipe.set("document_id", str(chunk_id))  # Store only one ID
             upload_pipe.execute()
 
+            # Verify Redis data
             logging.info("Verifying Redis data after upload:")
             logging.info(f"filename exists: {redis_cache.exists('filename')}")
-            logging.info(
-                f"document_store exists: {redis_cache.exists('document_store')}"
-            )
+            logging.info(f"document_store exists: {redis_cache.exists('document_store')}")
             logging.info(f"agent_status exists: {redis_cache.exists('agent_status')}")
-            logging.info(f"document_id exists: {redis_cache.exists('document_id')}")
+            logging.info(f"Stored document_id: {redis_cache.get('document_id').decode('utf-8')}")
 
-            if redis_cache.exists("filename"):
-                logging.info(
-                    f"Stored filename: {redis_cache.get('filename').decode('utf-8')}"
-                )
-            logging.info("Upload successfully")
-            return {"message": "Upload successful"}
+            logging.info("Upload successful.")
+            return {"message": "Upload successful."}
         except Exception as e:
             logging.error(f"Document processing error: {str(e)}")
-            logging.error(f"Error type: {type(e)}")
-            import traceback
-
             logging.error(f"Processing error traceback: {traceback.format_exc()}")
             return {"message": f"Document processing failed: {str(e)}"}
-    except:
-        return {"message": "problem"}
+    except Exception as e:
+        logging.error(f"Unexpected error: {str(e)}")
+        return {"message": "Upload failed: An unexpected error occurred."}
+
 
 
 @app.on_event("startup")

@@ -32,20 +32,13 @@ os.environ["HAYSTACK_CONTENT_TRACING_ENABLED"] = "True"
 from pathlib import Path
 from getpass import getpass
 import threading
-from docling.datamodel.base_models import InputFormat, DocumentStream
-from docling.pipeline.simple_pipeline import SimplePipeline
-from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
-from docling.document_converter import (
-    DocumentConverter,
-    PdfFormatOption,
-    WordFormatOption,
-    PowerpointFormatOption,
-)
-from docling.datamodel.document import ConversionResult
-from docling_core.transforms.chunker import HierarchicalChunker
-
-# from docling_core.transforms.chunker import hierarchical_chunker
-from docling_core.transforms.chunker.base import BaseChunk
+import hashlib
+import pypdf  # PyMuPDF
+import docx
+import pptx
+import io
+from io import BytesIO
+from haystack import Document
 from haystack import Pipeline, Document
 from haystack.document_stores.in_memory import InMemoryDocumentStore
 from haystack.document_stores.types import DuplicatePolicy
@@ -139,37 +132,53 @@ class Converter:
         self.document_store = document_store
 
     def convert(self):
-        doc = DocumentStream(name=self.filename, stream=self.buf)
-        pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = False
-        pipeline_options.do_table_structure = True
-        pipeline_options.table_structure_options.do_cell_matching = True
-        doc_converter = DocumentConverter(
-            allowed_formats=[
-                InputFormat.PDF,
-                InputFormat.DOCX,
-                InputFormat.PPTX,
-            ],
-            format_options={
-                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
-                InputFormat.DOCX: WordFormatOption(pipeline_cls=SimplePipeline),
-                InputFormat.PPTX: PowerpointFormatOption(pipeline_cls=SimplePipeline),
-            },
-        )
-        convert_doc: ConversionResult = doc_converter.convert(doc)
-        convert_doc = convert_doc.document
+        text = self.extract_text()
+        if not text:
+            return []
 
-        chunks = list(HierarchicalChunker().chunk(convert_doc))
-        documents = []
-        ids = []
-        for chunk in chunks:
-            chunk_id = hashlib.sha256((chunk.text).encode("utf-8")).hexdigest()
-            documents.append(Document(content=chunk.text, id=chunk_id))
-            ids.append(chunk_id)
+        chunk_id = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        document = Document(content=text, id=chunk_id)
+
         self.document_store.write_documents(
-            documents=documents, policy=DuplicatePolicy.SKIP
+            documents=[document], policy=DuplicatePolicy.SKIP
         )
-        return ids
+        return [chunk_id]
+
+    def extract_text(self):
+        ext = self.filename.lower().split(".")[-1]
+
+        if ext == "pdf":
+            return self.extract_text_from_pdf()
+        elif ext == "docx":
+            return self.extract_text_from_docx()
+        elif ext == "pptx":
+            return self.extract_text_from_pptx()
+        else:
+            raise ValueError(f"Unsupported file format: {ext}")
+
+    def extract_text_from_pdf(self):
+        text = ""
+        if isinstance(self.buf, io.BytesIO):
+            self.buf = self.buf.getvalue()
+        
+        reader = pypdf.PdfReader(BytesIO(self.buf))
+        for page in reader.pages:
+            text += page.extract_text() + "\n"
+
+        return text.strip()
+
+    def extract_text_from_docx(self):
+        doc = docx.Document(BytesIO(self.buf))
+        return "\n".join(para.text for para in doc.paragraphs).strip()
+
+    def extract_text_from_pptx(self):
+        prs = pptx.Presentation(BytesIO(self.buf))
+        text = []
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if hasattr(shape, "text"):
+                    text.append(shape.text)
+        return "\n".join(text).strip()
 
 
 def extract_questions(context, num, generated_content):
