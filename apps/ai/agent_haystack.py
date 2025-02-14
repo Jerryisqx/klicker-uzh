@@ -219,7 +219,7 @@ class Agent_stage1:
         # self.tracer = LangfuseConnector("Basic RAG Pipeline")
         self.document_store = InMemoryDocumentStore(index=filename)
         self.retriever = InMemoryBM25Retriever(document_store=self.document_store)
-        if model == "OpenAI":
+        if model == "GPT-4o":
             # load_openai_api_key()
             self.api_key = os.getenv("OPENAI_API_KEY")
             self.generator = OpenAIGenerator(model="gpt-4o-2024-11-20")

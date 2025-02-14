@@ -56,7 +56,9 @@ services:
       TOGETHER_API_KEY: ${TOGETHER_API_KEY}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
-      DATABASE_URL: 'postgresql://klicker:klicker@postgres:5432/klicker'
+      AI_GENERATE_URL: ${AI_GENERATE_URL}
+      FILE_UPLOAD_URL: ${FILE_UPLOAD_URL}
+      DATABASE_URL: 'postgresql://klicker:klicker@172.26.56.188:5432/klicker'
       REDIS_CACHE_HOST: 'redis_cache'
       REDIS_CACHE_PASS: ''
       REDIS_CACHE_PORT: 6379

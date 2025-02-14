@@ -335,14 +335,21 @@ async def upload_pdf(request: FileUploadRequest):
 
         # Check Redis cache for existing file
         cached_filename = redis_cache.get("filename")
-        if cached_filename and cached_filename.decode("utf-8") == filename:
-            document_store = DocumentStore(filename).get_store()
-            if document_store.count_documents() > 0:
-                logging.info("Uploaded file found in cache, using cached data.")
-                return {"message": "Upload successful (cached)."}
-        elif cached_filename:
-            logging.info("Found unused cached memory, deleting first...")
-            DocumentStore(cached_filename.decode("utf-8")).delete()
+        try:
+            if cached_filename:
+                # Check if cached filename is a string (bytes in Redis)
+                cached_filename_str = cached_filename.decode("utf-8")
+                if cached_filename_str == filename:
+                    document_store = DocumentStore(filename).get_store()
+                    if document_store.count_documents() > 0:
+                        logging.info("Uploaded file found in cache, using cached data.")
+                        return {"message": "Upload successful (cached)."}
+
+        except Exception as e:
+            logging.error(f"Error processing cached filename: {e}")
+            # If error occurs, safely delete cache
+            redis_cache.delete("filename")
+            cached_filename_str = None
 
         try:
             # Create Document Store

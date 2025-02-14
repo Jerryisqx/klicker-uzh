@@ -121,6 +121,10 @@ export default function Home() {
     }
   }, [dataHistory])
 
+  const [isGenerateButtonDisabled, setIsGenerateButtonDisabled] = useState(false);
+  const [generateButtonText, setGenerateButtonText] = useState(t('manage.aiRelate.genCap'));
+
+
   // Handle the click event for "Generate Question" button
   const handleGenerateQuestions = async () => {
     if (!isFileUploaded) {
@@ -139,6 +143,10 @@ export default function Home() {
     setGenerateError(null)
     setQuestions([]) //clear old data
 
+    setIsGenerateButtonDisabled(true)
+    setGenerateButtonText(t('manage.aiRelate.generating'))
+
+
     try {
       const response = await generatedQuestion({
         variables: {
@@ -146,7 +154,7 @@ export default function Home() {
           language: selectedLanguage || 'English',
           type: selectedType || 'Content',
           difficulty: difficultyLevel || 'EASY',
-          model: selectedModel || 'OpenAI',
+          model: selectedModel || 'GPT-4o',
         },
       })
       console.log('Response:', response)
@@ -185,6 +193,8 @@ export default function Home() {
       setQuestionsGenerated(false)
     } finally {
       setIsGenerating(false)
+      setIsGenerateButtonDisabled(false)  // Enable the button
+      setGenerateButtonText(t('manage.aiRelate.genCap'))
     }
   }
 
@@ -234,6 +244,9 @@ export default function Home() {
     })
   }
 
+  const [isUploadButtonDisabled, setIsUploadButtonDisabled] = useState(false);
+  const [uploadButtonText, setUploadButtonText] = useState(t('manage.aiRelate.uploadFile'));
+
   const handleFileUpload = async () => {
     if (!selectedFile) {
       setUploadError(t('manage.aiRelate.noFileSelected'))
@@ -247,6 +260,8 @@ export default function Home() {
     setIsUploading(true)
     // const formData = new FormData()
     // formData.append('file', selectedFile)
+    setIsUploadButtonDisabled(true)
+    setUploadButtonText(t('manage.aiRelate.uploading'))
 
     try {
       // const response = await fetch('https://manage.klicker-mp.bf-app.ch/ai/upload', {
@@ -287,6 +302,8 @@ export default function Home() {
       setIsFileUploaded(false)
     } finally {
       setIsUploading(false)
+      setIsUploadButtonDisabled(false)
+      setUploadButtonText(t('manage.aiRelate.uploadFile'))  
     }
   }
 
@@ -349,11 +366,12 @@ export default function Home() {
               />
               <Button
                 onClick={handleFileUpload}
+                disabled={isUploadButtonDisabled}
                 className={{
                   root: 'bg-primary-80 flex h-10 w-full items-center justify-center rounded-lg font-bold text-white transition hover:bg-blue-900',
                 }}
               >
-                <Button.Label>{t('manage.aiRelate.uploadFile')}</Button.Label>
+                <Button.Label>{uploadButtonText}</Button.Label>
               </Button>
 
               {/*Notification of file upload status*/}
@@ -389,12 +407,12 @@ export default function Home() {
                 <Select
                   items={[
                     {
-                      label: 'OpenAI',
-                      value: 'OpenAI',
+                      label: 'GPT-4o',
+                      value: 'GPT-4o',
                     },
                     {
-                      label: 'Claude',
-                      value: 'Claude',
+                      label: 'Claude-3-5-sonnet',
+                      value: 'Claude-3-5-sonnet',
                     },
                     // {
                     //     label: 'Llama',
@@ -565,11 +583,12 @@ export default function Home() {
 
               <Button
                 onClick={handleGenerateQuestions}
+                disabled={isGenerateButtonDisabled}
                 className={{
                   root: 'bg-primary-80 flex h-10 w-full items-center justify-center rounded-lg font-bold text-white transition hover:bg-blue-900',
                 }}
               >
-                {t('manage.aiRelate.genCap')}
+                {generateButtonText}
               </Button>
             </div>
           </div>
