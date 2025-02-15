@@ -121,9 +121,11 @@ export default function Home() {
     }
   }, [dataHistory])
 
-  const [isGenerateButtonDisabled, setIsGenerateButtonDisabled] = useState(false);
-  const [generateButtonText, setGenerateButtonText] = useState(t('manage.aiRelate.genCap'));
-
+  const [isGenerateButtonDisabled, setIsGenerateButtonDisabled] =
+    useState(false)
+  const [generateButtonText, setGenerateButtonText] = useState(
+    t('manage.aiRelate.genCap')
+  )
 
   // Handle the click event for "Generate Question" button
   const handleGenerateQuestions = async () => {
@@ -146,7 +148,6 @@ export default function Home() {
     setIsGenerateButtonDisabled(true)
     setGenerateButtonText(t('manage.aiRelate.generating'))
 
-
     try {
       const response = await generatedQuestion({
         variables: {
@@ -158,16 +159,32 @@ export default function Home() {
         },
       })
       console.log('Response:', response)
-      if (response.data) {
-        console.log('Questions successfully generated and stored')
-        const { data } = await refetchQuestions({ limit: Number(numQuestions) })
-        if (data && data.latestNQuestions) {
-          setQuestions(data.latestNQuestions)
-          setQuestionsGenerated(true)
-          console.log('Questions successfully fetched')
+
+      if (response.errors) {
+        if (Array.isArray(response.errors) && response.errors.length > 0) {
+          setGenerateError(response.errors.map((e) => e.message).join(', '))
+        } else {
+          // if the error message is not 'standard' array
+          setGenerateError(t('manage.aiRelate.timeoutError'))
         }
-        await refetchHistoryQuestions()
+        setQuestionsGenerated(false)
+        return
       }
+
+      if (!response.data || !response.data.generateQuestion) {
+        setGenerateError(t('manage.aiRelate.unexpectedError'))
+        setQuestionsGenerated(false)
+        return
+      }
+
+      console.log('Questions successfully generated and stored')
+      const { data } = await refetchQuestions({ limit: Number(numQuestions) })
+      if (data && data.latestNQuestions) {
+        setQuestions(data.latestNQuestions)
+        setQuestionsGenerated(true)
+        console.log('Questions successfully fetched')
+      }
+      await refetchHistoryQuestions()
     } catch (error) {
       console.error('Error generating questions:', error)
       if (error instanceof ApolloError) {
@@ -193,7 +210,7 @@ export default function Home() {
       setQuestionsGenerated(false)
     } finally {
       setIsGenerating(false)
-      setIsGenerateButtonDisabled(false)  // Enable the button
+      setIsGenerateButtonDisabled(false) // Enable the button
       setGenerateButtonText(t('manage.aiRelate.genCap'))
     }
   }
@@ -244,8 +261,10 @@ export default function Home() {
     })
   }
 
-  const [isUploadButtonDisabled, setIsUploadButtonDisabled] = useState(false);
-  const [uploadButtonText, setUploadButtonText] = useState(t('manage.aiRelate.uploadFile'));
+  const [isUploadButtonDisabled, setIsUploadButtonDisabled] = useState(false)
+  const [uploadButtonText, setUploadButtonText] = useState(
+    t('manage.aiRelate.uploadFile')
+  )
 
   const handleFileUpload = async () => {
     if (!selectedFile) {
@@ -279,9 +298,16 @@ export default function Home() {
       // If the data structure is unexpected, considerd as false
       if (response.errors || !response.data || !response.data.uploadFile) {
         // can be modified later
-        const errorMessage = response.errors
-          ? response.errors.map((e) => e.message).join(', ')
-          : t('manage.aiRelate.fileFail')
+        let errorMessage = t('manage.aiRelate.fileFail')
+        if (response.errors) {
+          if (Array.isArray(response.errors) && response.errors.length > 0) {
+            errorMessage = response.errors.map((e) => e.message).join(', ')
+          } else {
+            // if the error message is not 'standard' array
+            errorMessage = t('manage.aiRelate.timeoutError')
+          }
+        }
+
         // Set error message
         setUploadError(errorMessage)
         setUploadSuccess(false)
@@ -303,7 +329,7 @@ export default function Home() {
     } finally {
       setIsUploading(false)
       setIsUploadButtonDisabled(false)
-      setUploadButtonText(t('manage.aiRelate.uploadFile'))  
+      setUploadButtonText(t('manage.aiRelate.uploadFile'))
     }
   }
 
@@ -588,7 +614,7 @@ export default function Home() {
                   root: 'bg-primary-80 flex h-10 w-full items-center justify-center rounded-lg font-bold text-white transition hover:bg-blue-900',
                 }}
               >
-                {generateButtonText}
+                <Button.Label>{generateButtonText}</Button.Label>
               </Button>
             </div>
           </div>

@@ -778,38 +778,49 @@ Da die KlickerUZH-App noch nicht im iOS-App-Store verfügbar ist, folgen Sie die
         'Catalyst-Zugriff erforderlich. Mehr Informationen unter <link></link>.',
       ai: 'AI Fragen',
       setLangauage: 'Sprache der Frage wahlen',
-
     },
     aiRelate: {
       welcomeMessage: 'Willkommen bei KlickerUZH Fragen Generieren Seite!',
-      numQuestion: 'Wählen Sie die Anzahl der Fragen, die Sie erstellen möchten, oder RANDOM, wenn Sie unsicher sind',
+      numQuestion:
+        'Wählen Sie die Anzahl der Fragen, die Sie erstellen möchten, oder RANDOM, wenn Sie unsicher sind',
       genCap: 'FRAGE GENERIEREN',
       generatedQuestions: 'Die KI-gesteuerten Fragen',
-      generating:'Generierung...',
+      generating: 'Generierung...',
       previous: 'Vorherige',
       next: 'Next',
       page: 'Seite {currentPage} von {totalPages}',
       fileUpload: 'Laden Sie eine Datei zun Generieren hoch:',
-      noFileSelected: 'Keine Datei ausgewählt. Bitte wählen Sie eine Datei zum Hochladen.',
+      noFileSelected:
+        'Keine Datei ausgewählt. Bitte wählen Sie eine Datei zum Hochladen.',
       uploadFile: 'DATET HOCHLADEN',
-      uploading:'Hochladen...',
-      selectModel: 'Wählen Sie das Modell aus, mit dem Sie Antworten generieren möchten',
+      uploading: 'Hochladen...',
+      selectModel:
+        'Wählen Sie das Modell aus, mit dem Sie Antworten generieren möchten',
       fileSuccess: 'Dateiupload erfolgreich!',
       fileFail: 'Dateiupload fehlgeschlagen, bitte versuchen Sie es erneut.',
-      chooseType:'Wählen Sie die Art der Fragen, die Sie erstellen möchten, oder RANDOM, wenn Sie unsicher sind',
+      chooseType:
+        'Wählen Sie die Art der Fragen, die Sie erstellen möchten, oder RANDOM, wenn Sie unsicher sind',
       noTypeError: 'Bitte wählen Sie einen Fragetyp aus, um fortzufahren',
-      noNumQError: 'Bitte wählen Sie die Anzahl der Fragen, mit denen Sie fortfahren möchten',
-      noModelError: 'Bitte wählen Sie ein Modell aus, um Fragen zu generieren und fortzufahren',
-      noLanguageError: 'Bitte wählen Sie die Sprache der Fragen aus, um fortzufahren',
-      noDifficultyError: 'Bitte wählen Sie den Schwierigkeitsgrad der Fragen aus, um fortzufahren',
-      unexpectedError: 'Ein unerwarteter Fehler ist aufgetreten, bitte versuchen Sie es erneut',
-      chooseDifficulty:'Wählen Sie den Schwierigkeitsgrad der Fragen, die Sie erstellen möchten, oder RANDOM, wenn Sie unsicher sind',
+      noNumQError:
+        'Bitte wählen Sie die Anzahl der Fragen, mit denen Sie fortfahren möchten',
+      noModelError:
+        'Bitte wählen Sie ein Modell aus, um Fragen zu generieren und fortzufahren',
+      noLanguageError:
+        'Bitte wählen Sie die Sprache der Fragen aus, um fortzufahren',
+      noDifficultyError:
+        'Bitte wählen Sie den Schwierigkeitsgrad der Fragen aus, um fortzufahren',
+      unexpectedError:
+        'Ein unerwarteter Fehler ist aufgetreten, bitte versuchen Sie es erneut',
+      timeoutError:
+        'Die Anfrage hat zu lange gedauert. Bitte überprüfen Sie Ihre Netzwerkverbindung und versuchen Sie es erneut',
+      chooseDifficulty:
+        'Wählen Sie den Schwierigkeitsgrad der Fragen, die Sie erstellen möchten, oder RANDOM, wenn Sie unsicher sind',
       random: 'RANDOM',
       generatingTab: 'Fragen Erzeugen',
       historyTab: 'Geschichte Fragen',
       noHistory: 'Sie haben keine Fragen generiert',
       rateQuestion: 'Frage Bewerten',
-      rateCompleted:'Bewertung abgeschlossen',
+      rateCompleted: 'Bewertung abgeschlossen',
       english: 'Englisch',
       german: 'Deutsch',
       rate: 'Bewerten Sie die Frage',
@@ -820,11 +831,15 @@ Da die KlickerUZH-App noch nicht im iOS-App-Store verfügbar ist, folgen Sie die
       neutral: 'Neutral',
       help: 'Helfen Sie uns, das Erlebnis zu verbessern',
       extent: 'Inwieweit stimmen Sie der folgenden Aussage zu?',
-      factEval: 'Die erstellte Frage ist sachlich korrekt und stimmt mit dem Unterrichtsinhalt überein.',
-      diffEval: 'Die Einstufung des Schwierigkeitsgrades ist für die gestellte Frage angemessen.',
-      typeEval: 'Die Art der erstellten Frage ist für die beabsichtigten Unterrichtsziele gut geeignet.',
-      relaEval: 'Der Inhalt der erstellten Frage stimmt gut mit dem Eingangskontext und den Lernzielen überein.',
-      ambiEval:'Die erstellte Frage ist klar, prägnant und nicht zweideutig.',
+      factEval:
+        'Die erstellte Frage ist sachlich korrekt und stimmt mit dem Unterrichtsinhalt überein.',
+      diffEval:
+        'Die Einstufung des Schwierigkeitsgrades ist für die gestellte Frage angemessen.',
+      typeEval:
+        'Die Art der erstellten Frage ist für die beabsichtigten Unterrichtsziele gut geeignet.',
+      relaEval:
+        'Der Inhalt der erstellten Frage stimmt gut mit dem Eingangskontext und den Lernzielen überein.',
+      ambiEval: 'Die erstellte Frage ist klar, prägnant und nicht zweideutig.',
     },
     support: {
       modalTitle: 'Support KlickerUZH',

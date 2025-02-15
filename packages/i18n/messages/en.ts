@@ -780,38 +780,43 @@ Since the KlickerUZH app is not yet available on the iOS App Store, follow these
         'Requires catalyst access. For more information, see <link></link>.',
       ai: 'AI Questions',
       setLanguage: 'Choose Question Language',
-
     },
     aiRelate: {
       welcomeMessage: 'Wecolem to KlickerUZH Questions Generate Page!',
-      numQuestion: 'Choose the number of questions you want to generate, or RANDOM if unsure',
+      numQuestion:
+        'Choose the number of questions you want to generate, or RANDOM if unsure',
       genCap: 'GENERATE QUESTION',
       generatedQuestions: 'The AI-powered Questions',
-      generating:'Generating...',
+      generating: 'Generating...',
       previous: 'Previous',
       next: 'Next',
       page: 'Page {currentPage} of {totalPages}',
       fileUpload: 'Upload a file for generating:',
       noFileSelected: 'No file selected. Please select a file to upload.',
       uploadFile: 'UPLOAD FILE',
-      uploading:'Uploading...',
+      uploading: 'Uploading...',
       selectModel: 'Choose the model you want to generate qeustions with',
       fileSuccess: 'File upload success!',
       fileFail: 'File upload failed, please retry.',
-      chooseType:'Choose the type of questions you want to generate, or RANDOM if unsure',
+      chooseType:
+        'Choose the type of questions you want to generate, or RANDOM if unsure',
       noTypeError: 'Please select a question type to continue',
       noNumQError: 'Please select the number of questions you want to continue',
       noModelError: 'Please select a model to generate questions to continue',
       noLanguageError: 'Please select the language of questions to continue',
-      noDifficultyError: 'Please select the difficulty level of questions to continue',
+      noDifficultyError:
+        'Please select the difficulty level of questions to continue',
       unexpectedError: 'An unexpected error occured, please retry',
-      chooseDifficulty:'Choose the difficulty level of questions you want to generate, or RANDOM if unsure',
+      timeoutError:
+        'Request timed out. Please check your network connection and try again',
+      chooseDifficulty:
+        'Choose the difficulty level of questions you want to generate, or RANDOM if unsure',
       random: 'RANDOM',
       generatingTab: 'Generating Questions',
       historyTab: 'History Questions',
       noHistory: "You haven't generate any questions",
       rateQuestion: 'Rate Question',
-      rateCompleted:'Rate Completed',
+      rateCompleted: 'Rate Completed',
       english: 'English',
       german: 'German',
       rate: 'Rate the Question',
@@ -822,11 +827,16 @@ Since the KlickerUZH app is not yet available on the iOS App Store, follow these
       neutral: 'Neutral',
       help: 'Help us improve the experience',
       extent: 'To what extent do you agree with the following statement?',
-      factEval: 'The generated question is factually accurate and consistent with the teaching content.',
-      diffEval: 'The difficulty level categorization is appropriate for the generated question.',
-      typeEval: 'The type of the generated question is well-suited to the intended teaching objectives.',
-      relaEval: 'The content of the generated question aligns well with the input context and learning objectives.',
-      ambiEval:'The generated question is clear, concise, and free from ambiguity.',
+      factEval:
+        'The generated question is factually accurate and consistent with the teaching content.',
+      diffEval:
+        'The difficulty level categorization is appropriate for the generated question.',
+      typeEval:
+        'The type of the generated question is well-suited to the intended teaching objectives.',
+      relaEval:
+        'The content of the generated question aligns well with the input context and learning objectives.',
+      ambiEval:
+        'The generated question is clear, concise, and free from ambiguity.',
     },
     support: {
       modalTitle: 'Support KlickerUZH',
