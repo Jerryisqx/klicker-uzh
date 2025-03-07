@@ -67,14 +67,16 @@ class Flashcard(BaseModel):
 
 class Content(BaseModel):
     gt_type: Literal["Content"]
-    answers: str
+    answers: Optional[str] = None
 
 
 class Base(BaseModel):
     type: str
     difficulty: str
     field: str
-    question: str
+    question: str = Field(..., alias="content")
+    class Config:
+        populate_by_name = True 
 
     @field_validator("type", "difficulty", "field", "question", mode="before")
     @staticmethod
@@ -123,11 +125,9 @@ def parse_question(generated_text, num):
             current_question["type"] = base_data["type"]
             current_question["difficulty"] = base_data["difficulty"].upper()
             current_question["name"] = base_data["field"]
-            current_question["question"] = base_data.get("content") or base_data.get(
-                "question"
-            )
+            current_question["question"] = base_data.get("content") or base_data.get("question")
             current_question["options"] = back_part
             questions.append(current_question)
         except ValidationError as e:
-            return e
+            return f"Error: Pydantic validation failed: {str(e)}"
     return questions

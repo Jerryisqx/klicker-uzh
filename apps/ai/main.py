@@ -279,6 +279,7 @@ async def generate_questions(request: GenerateQuestionsRequest):
                     # agent2 = Agent_stage2(
                     #     retriever=generated_text1, template=stage2, filename=filename
                     # )
+                    filename = redis_cache.get("filename").decode("utf-8")
                     app.state.agent2.init(filename, generated_text1, model)
                     redis_cache.set("agent_status", 1)
                 else:
