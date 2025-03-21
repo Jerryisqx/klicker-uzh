@@ -1,5 +1,13 @@
-query GetHistoryGeneratedQuestions($limit: Int!, $offset: Int!){
-  historyGeneratedQuestions(limit: $limit, offset: $offset) {
+query GetHistoryGeneratedQuestions(
+  $limit: Int!
+  $offset: Int!
+  $difficulty: String
+) {
+  historyGeneratedQuestions(
+    limit: $limit
+    offset: $offset
+    difficultyFilter: $difficulty
+  ) {
     __typename
 
     ... on ChoicesElement {
@@ -39,7 +47,6 @@ query GetHistoryGeneratedQuestions($limit: Int!, $offset: Int!){
 
       createdAt
       updatedAt
-
 
       options {
         __typename

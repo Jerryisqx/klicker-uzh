@@ -6,7 +6,7 @@ import {
 import { IconDefinition, faArchive } from '@fortawesome/free-solid-svg-icons'
 import { Button, Checkbox, H2, H3, Modal } from '@uzh-bf/design-system'
 import { Badge } from '@uzh-bf/design-system/dist/future'
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useDrag } from 'react-dnd'
 import { twMerge } from 'tailwind-merge'
 // TODO: readd modals and tags
@@ -14,28 +14,30 @@ import { twMerge } from 'tailwind-merge'
 // import QuestionDuplicationModal from './QuestionDuplicationModal'
 import { useMutation, useQuery } from '@apollo/client'
 import { faCopy } from '@fortawesome/free-regular-svg-icons'
-import { faPencil, faTrash, faThumbsUp} from '@fortawesome/free-solid-svg-icons'
+import {
+  faPencil,
+  faThumbsUp,
+  faTrash,
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   DeleteQuestionDocument,
   ElementStatus,
   ElementType,
+  GetQuestionDifficultyDocument,
   GetUserQuestionsDocument,
   Tag,
-  GetQuestionDifficultyDocument,
 } from '@klicker-uzh/graphql/dist/ops'
 import { Ellipsis } from '@klicker-uzh/markdown'
 import dayjs from 'dayjs'
 import { useTranslations } from 'next-intl'
+import { usePageSource } from 'src/pageContext/PageContext'
 import ElementEditModal, {
   ElementEditMode,
 } from './manipulation/ElementEditModal'
 import RatingModal from './manipulation/questionRateModal'
 import QuestionTags from './QuestionTags'
-import { usePageSource } from 'src/pageContext/PageContext'
 // import QuestionTags from './QuestionTags'
-
-
 
 const StatusColors: Record<ElementStatus, string> = {
   [ElementStatus.Draft]: 'bg-slate-400',
@@ -47,8 +49,7 @@ const DifficultyColors: Record<string, string> = {
   EASY: 'bg-green-400',
   MEDIUM: 'bg-yellow-400',
   HARD: 'bg-red-400',
-};
-
+}
 
 const ElementIcons: Record<ElementType, IconDefinition> = {
   FLASHCARD: faListRegular,
@@ -109,30 +110,32 @@ function Question({
 }: QuestionProps): React.ReactElement {
   const t = useTranslations()
   const [isModificationModalOpen, setIsModificationModalOpen] = useState(false)
-  const [isRated, setIsRated] = useState(false);  // check if it's already rated
+  const [isRated, setIsRated] = useState(false) // check if it's already rated
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false)
   const [isDuplicationModalOpen, setIsDuplicationModalOpen] = useState(false)
   const [isDeletionModalOpen, setIsDeletionModalOpen] = useState(false)
   const [deleteQuestion, { loading: deleting }] = useMutation(
     DeleteQuestionDocument
   )
-  
 
-  const { data: difficultyData, loading: loadingDifficulty, error: errorDifficulty,} = useQuery(GetQuestionDifficultyDocument, {
+  const {
+    data: difficultyData,
+    loading: loadingDifficulty,
+    error: errorDifficulty,
+  } = useQuery(GetQuestionDifficultyDocument, {
     variables: { id },
-  
-  });
+  })
 
-  const difficulty = difficultyData?.questionDifficulty;
+  const difficulty = difficultyData?.questionDifficulty
 
   // refresh the title after submitting rate
   const handleRatingCompleted = () => {
-    setIsRated(true);  
-    setIsRatingModalOpen(false);  
-  };
-  
+    setIsRated(true)
+    setIsRatingModalOpen(false)
+  }
+
   //Determine which subpage we are in
-  const { isGeneratedPage } = usePageSource();
+  const { isGeneratedPage } = usePageSource()
 
   const [collectedProps, drag] = useDrag({
     item: {
@@ -155,7 +158,7 @@ function Question({
       className="flex items-center gap-1.5"
       data-cy={`question-item-${title}`}
     >
-      <Checkbox checked={checked} onCheck={onCheck} />
+      {!isGeneratedPage && <Checkbox checked={checked} onCheck={onCheck} />}
       {drag(
         <div
           className={twMerge(
@@ -245,7 +248,11 @@ function Question({
               <Button.Icon>
                 <FontAwesomeIcon icon={faPencil} />
               </Button.Icon>
-              <Button.Label>{isGeneratedPage ? t('shared.generic.preview') : t('shared.generic.edit')}</Button.Label>
+              <Button.Label>
+                {isGeneratedPage
+                  ? t('shared.generic.preview')
+                  : t('shared.generic.edit')}
+              </Button.Label>
             </Button>
             {isModificationModalOpen && (
               <ElementEditModal
@@ -260,7 +267,7 @@ function Question({
               <>
                 <Button
                   className={{
-                    root: 'bg-primary-80 h-10 font-bold text-white rounded-lg hover:bg-blue-900 transition',
+                    root: 'bg-primary-80 h-10 rounded-lg font-bold text-white transition hover:bg-blue-900',
                   }}
                   onClick={() => setIsRatingModalOpen(true)}
                   aria-label={isRated ? 'Rate Completed' : 'Rate Question'}
@@ -270,38 +277,36 @@ function Question({
                   </Button.Icon>
                   <Button.Label>
                     {isRated
-                      ? t('manage.aiRelate.rateCompleted')  
+                      ? t('manage.aiRelate.rateCompleted')
                       : t('manage.aiRelate.rateQuestion')}
                   </Button.Label>
                 </Button>
-            
+
                 {/*Display rating modal*/}
                 {isRatingModalOpen && (
                   <RatingModal
                     isOpen={isRatingModalOpen}
                     handleSetIsOpen={setIsRatingModalOpen}
                     questionId={id}
-                    handleRatingCompleted={handleRatingCompleted} 
+                    handleRatingCompleted={handleRatingCompleted}
                   />
                 )}
               </>
-
             )}
-
 
             {!isGeneratedPage && (
               <>
                 <Button
                   className={{
-                  root: 'space-x-2 bg-white text-sm md:w-36 md:text-base',
+                    root: 'space-x-2 bg-white text-sm md:w-36 md:text-base',
                   }}
                   onClick={(): void => setIsDuplicationModalOpen(true)}
                   data={{ cy: `duplicate-question-${title}` }}
                 >
-                <Button.Icon>
-                  <FontAwesomeIcon icon={faCopy} />
-                </Button.Icon>
-                <Button.Label>{t('shared.generic.duplicate')}</Button.Label>
+                  <Button.Icon>
+                    <FontAwesomeIcon icon={faCopy} />
+                  </Button.Icon>
+                  <Button.Label>{t('shared.generic.duplicate')}</Button.Label>
                 </Button>
                 {isDuplicationModalOpen && (
                   <ElementEditModal
@@ -313,15 +318,15 @@ function Question({
                 )}
                 <Button
                   className={{
-                  root: 'space-x-2 border-red-400 text-sm md:w-36 md:text-base',
+                    root: 'space-x-2 border-red-400 text-sm md:w-36 md:text-base',
                   }}
                   onClick={() => setIsDeletionModalOpen(true)}
                   data={{ cy: `delete-question-${title}` }}
                 >
-                <Button.Icon>
-                  <FontAwesomeIcon icon={faTrash} />
-                </Button.Icon>
-                <Button.Label>{t('shared.generic.delete')}</Button.Label>
+                  <Button.Icon>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button.Icon>
+                  <Button.Label>{t('shared.generic.delete')}</Button.Label>
                 </Button>
               </>
             )}

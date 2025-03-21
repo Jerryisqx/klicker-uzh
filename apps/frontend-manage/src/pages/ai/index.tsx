@@ -12,7 +12,7 @@ import Loader from '@klicker-uzh/shared-components/src/Loader'
 import { Button, H2, Label, Select } from '@uzh-bf/design-system'
 import { GetStaticPropsContext } from 'next'
 import { useTranslations } from 'next-intl'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { pickBy } from 'remeda'
 import { PageSourceProvider } from 'src/pageContext/PageContext'
 import Layout from '../../components/Layout'
@@ -38,6 +38,7 @@ export default function Home() {
   const [selectedModel, setSelectedModel] = useState<string>()
   const [numQuestions, setNumQuestions] = useState<string>()
   const [difficultyLevel, setDifficultyLevel] = useState<string>()
+  const [difficultyFilter, setDifficultyFilter] = useState<string>('ALL')
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
   const [questionsGenerated, setQuestionsGenerated] = useState(false)
   const [questions, setQuestions] = useState<any[]>([])
@@ -81,8 +82,17 @@ export default function Home() {
     variables: {
       limit: itemsPerPage,
       offset: (currentPage - 1) * itemsPerPage,
+      difficulty: difficultyFilter === 'ALL' ? undefined : difficultyFilter,
     },
   })
+
+  useEffect(() => {
+    refetchHistoryQuestions({
+      limit: itemsPerPage,
+      offset: (currentPage - 1) * itemsPerPage,
+      difficulty: difficultyFilter === 'ALL' ? undefined : difficultyFilter,
+    })
+  }, [difficultyFilter, currentPage, refetchHistoryQuestions])
 
   const {
     loading: loadingCount,
@@ -101,6 +111,12 @@ export default function Home() {
     if (!selectedFile) errors.push(t('manage.aiRelate.noFileSelected'))
 
     return errors
+  }
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const handleSingleButtonClick = () => {
+    fileInputRef.current?.click()
   }
 
   // Calculate total pages
@@ -215,7 +231,9 @@ export default function Home() {
     }
   }
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setUploadSuccess(null)
     setUploadError(null)
 
@@ -235,22 +253,15 @@ export default function Home() {
         setFileChanged(true)
         setIsFileUploaded(false)
       }
+
+      await handleFileUpload(file)
     } else {
       setSelectedFile(null)
       setFileChanged(false)
       setUploadError(t('manage.aiRelate.noFileSelected'))
     }
+    event.target.value = ''
   }
-
-  // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-
-  //   const fileInput = event.target;
-  //   fileInput.value = '';
-  //   if (event.target.files && event.target.files.length > 0) {
-  //     setSelectedFile(event.target.files[0])
-  //     setUploadSuccess(null)
-  //   }
-  // }
 
   const fileToBase64 = (file: File) => {
     return new Promise((resolve, reject) => {
@@ -266,8 +277,8 @@ export default function Home() {
     t('manage.aiRelate.uploadFile')
   )
 
-  const handleFileUpload = async () => {
-    if (!selectedFile) {
+  const handleFileUpload = async (file: File) => {
+    if (!file) {
       setUploadError(t('manage.aiRelate.noFileSelected'))
       setUploadSuccess(null)
       setIsFileUploaded(false)
@@ -287,11 +298,11 @@ export default function Home() {
       //   method: 'POST',
       //   body: formData,
       // })
-      const base64String = await fileToBase64(selectedFile)
+      const base64String = await fileToBase64(file)
       const response = await uploadFile({
         variables: {
           file: base64String as string,
-          filename: selectedFile.name,
+          filename: file.name,
         },
       })
 
@@ -386,12 +397,13 @@ export default function Home() {
                 }}
               />
               <input
+                ref={fileInputRef}
                 type="file"
-                className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-violet-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-violet-700 hover:file:bg-violet-100"
+                style={{ display: 'none' }}
                 onChange={handleFileChange}
               />
               <Button
-                onClick={handleFileUpload}
+                onClick={handleSingleButtonClick}
                 disabled={isUploadButtonDisabled}
                 className={{
                   root: 'bg-primary-80 flex h-10 w-full items-center justify-center rounded-lg font-bold text-white transition hover:bg-blue-900',
@@ -474,10 +486,6 @@ export default function Home() {
                     {
                       label: '5',
                       value: '5',
-                    },
-                    {
-                      label: '10',
-                      value: '10',
                     },
                     {
                       label: t('manage.aiRelate.random'),
@@ -685,72 +693,103 @@ export default function Home() {
                 />
               ) : null)}
 
-            {activeTab === 'history' &&
-              (loadingHistory ? (
-                <Loader />
-              ) : errorHistory ? (
-                <div>
-                  {t('shared.generic.error')}: {errorHistory.message}
-                </div>
-              ) : dataHistory && dataHistory.historyGeneratedQuestions ? (
-                <>
-                  <QuestionList
-                    questions={historyQuestions}
-                    selectedQuestions={selectedQuestionData}
-                    setSelectedQuestions={(id: number, data: Element) => {
-                      setSelectedQuestions((prev) => {
-                        const newSelectedQuestions = { ...prev }
-                        if (prev[id]) {
-                          delete newSelectedQuestions[id]
-                        } else {
-                          newSelectedQuestions[id] = data
-                        }
-                        return newSelectedQuestions
-                      })
+            {activeTab === 'history' && (
+              <>
+                {/* Difficulty filter dropdown */}
+                <div className="mb-4">
+                  <Select
+                    items={[
+                      {
+                        label: t('shared.EASY.difficultyLabel'),
+                        value: 'EASY',
+                      },
+                      {
+                        label: t('shared.MEDIUM.difficultyLabel'),
+                        value: 'MEDIUM',
+                      },
+                      {
+                        label: t('shared.HARD.difficultyLabel'),
+                        value: 'HARD',
+                      },
+                      { label: t('manage.aiRelate.all'), value: 'ALL' },
+                    ]}
+                    placeholder={t('manage.aiRelate.filterDifficulty')}
+                    onChange={(newValue) => setDifficultyFilter(newValue)} // Update difficultyFilter state
+                    className={{
+                      trigger:
+                        'w-1/2 text-center text-gray-400 placeholder:text-gray-400',
                     }}
-                    handleTagClick={(tag: string) => {
-                      console.log('Tag clicked:', tag)
-                    }}
-                    unsetDeletedQuestion={unsetDeletedQuestion}
                   />
-                  {/* Control Pages */}
-                  <div className="mt-4 flex items-center justify-between">
-                    <Button
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      <Button.Label>
-                        {t('manage.aiRelate.previous')}
-                      </Button.Label>
-                    </Button>
+                </div>
+
+                {/* Render Questions */}
+                {loadingHistory ? (
+                  <Loader />
+                ) : errorHistory ? (
+                  <div>
+                    {t('shared.generic.error')}: {errorHistory.message}
+                  </div>
+                ) : dataHistory && dataHistory.historyGeneratedQuestions ? (
+                  <>
+                    <QuestionList
+                      questions={historyQuestions}
+                      selectedQuestions={selectedQuestionData}
+                      setSelectedQuestions={(id: number, data: Element) => {
+                        setSelectedQuestions((prev) => {
+                          const newSelectedQuestions = { ...prev }
+                          if (prev[id]) {
+                            delete newSelectedQuestions[id]
+                          } else {
+                            newSelectedQuestions[id] = data
+                          }
+                          return newSelectedQuestions
+                        })
+                      }}
+                      handleTagClick={(tag: string) => {
+                        console.log('Tag cliicked:', tag)
+                      }}
+                      unsetDeletedQuestion={unsetDeletedQuestion}
+                    />
+                    {/* Control Pages */}
+                    <div className="mt-4 flex items-center justify-between">
+                      <Button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        <Button.Label>
+                          {t('manage.aiRelate.previous')}
+                        </Button.Label>
+                      </Button>
+                      <Label
+                        label={t('manage.aiRelate.page', {
+                          currentPage: currentPage,
+                          totalPages: totalPages,
+                        })}
+                        className={{
+                          root: 'text-sm font-medium text-gray-700',
+                        }}
+                      />
+
+                      <Button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        <Button.Label>{t('manage.aiRelate.next')}</Button.Label>
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-4 text-center">
                     <Label
-                      label={t('manage.aiRelate.page', {
-                        currentPage: currentPage,
-                        totalPages: totalPages,
-                      })}
+                      label={t('manage.aiRelate.noHistory')}
                       className={{
-                        root: 'text-sm font-medium text-gray-700',
+                        root: 'text-xl font-bold text-gray-500',
                       }}
                     />
-
-                    <Button
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      <Button.Label>{t('manage.aiRelate.next')}</Button.Label>
-                    </Button>
                   </div>
-                </>
-              ) : (
-                <div className="mt-4 text-center">
-                  <Label
-                    label={t('manage.aiRelate.noHistory')}
-                    className={{
-                      root: 'text-xl font-bold text-gray-500',
-                    }}
-                  />
-                </div>
-              ))}
+                )}
+              </>
+            )}
           </div>
         </div>
       </Layout>

@@ -787,8 +787,11 @@ Da die KlickerUZH-App noch nicht im iOS-App-Store verfügbar ist, folgen Sie die
       generatedQuestions: 'Die KI-gesteuerten Fragen',
       generating: 'Generierung...',
       previous: 'Vorherige',
+      saveToPool: 'In Den Fragenpool Speichern',
       next: 'Next',
+      all: 'ALLE',
       page: 'Seite {currentPage} von {totalPages}',
+      filterDifficulty: 'Fragen nach Schwierigkeitsgrad filtern',
       fileUpload: 'Laden Sie eine Datei zun Generieren hoch:',
       noFileSelected:
         'Keine Datei ausgewählt. Bitte wählen Sie eine Datei zum Hochladen.',

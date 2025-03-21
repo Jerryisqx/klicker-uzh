@@ -129,7 +129,7 @@
    "GetGroupActivity": "33dfd7e08e268a45983a49a4919a7e966640ec469407a0585094908685f14961",
    "GetGroupActivityInstances": "c720e1970bcd63a7bce7c80754a5872c8389b1ba35e693e9914f6dd014ae530f",
    "GetGroupActivitySummary": "7a3935db0e7cae8d5baf574a1c0506f568ffaaae1522a49363245946cff64d2d",
-   "GetHistoryGeneratedQuestions": "cc6f2e6446db94674f69246c79123bd08917b2e108d630f144f6360126c26975",
+   "GetHistoryGeneratedQuestions": "a0441e2bdb8a26b03140cb01c4bacc5300b1b3fda825b95c08aa572058ab2766",
    "GetLatestNQuestions": "2bd17b62f58d9810610c5f75e1cb128c6d5dc73437d856249c142c2861f03b4e",
    "GetLiveQuizSummary": "fd17c092be3d096abd6d31e89d8249bd4b482a2a6310f6893e9e32c5a70666c0",
    "GetLoginToken": "491946fc1fcbd066ea481c564313f4e50b7cc98ea16ab16a7a2146d75ec8cf00",

@@ -180,12 +180,19 @@ export async function getHistoryGeneratedQuestions(
     ownerId,
     limit = 10,
     offset = 0,
-  }: { ownerId: string; limit?: number; offset?: number },
+    difficultyFilter,
+  }: {
+    ownerId: string
+    limit?: number
+    offset?: number
+    difficultyFilter?: string
+  },
   ctx: ContextWithUser
 ) {
   const questions = await ctx.prisma.elementGenerated.findMany({
     where: {
       ownerId: ownerId,
+      difficulty: difficultyFilter ? difficultyFilter : undefined, //Apply difficulty filter if provided
     },
     orderBy: {
       createdAt: 'desc',

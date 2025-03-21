@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@apollo/client'
 import {
   ElementData,
   ElementType,
+  GetSingleGeneratedQuestionDocument,
   GetSingleQuestionDocument,
   GetUserQuestionsDocument,
   GetUserTagsDocument,
@@ -11,12 +12,12 @@ import {
   ManipulateFreeTextQuestionDocument,
   ManipulateNumericalQuestionDocument,
   UpdateQuestionInstancesDocument,
-  GetSingleGeneratedQuestionDocument,
 } from '@klicker-uzh/graphql/dist/ops'
 import { Button, Modal } from '@uzh-bf/design-system'
 import { Form, Formik } from 'formik'
 import { useTranslations } from 'next-intl'
 import React, { useState } from 'react'
+import { usePageSource } from 'src/pageContext/PageContext'
 import { twMerge } from 'tailwind-merge'
 import ElementContentInput from './ElementContentInput'
 import ElementExplanationField from './ElementExplanationField'
@@ -41,7 +42,6 @@ import OptionsLabel from './options/OptionsLabel'
 import SampleSolutionSetting from './options/SampleSolutionSetting'
 import useElementFormInitialValues from './useElementFormInitialValues'
 import useValidationSchema from './useValidationSchema'
-import { usePageSource } from 'src/pageContext/PageContext'
 
 export enum ElementEditMode {
   DUPLICATE = 'DUPLICATE',
@@ -63,7 +63,7 @@ function ElementEditModal({
   mode,
 }: ElementEditModalProps): React.ReactElement {
   // TODO: styling of tooltips - some are too wide
-  const { isGeneratedPage } = usePageSource(); //add to determine which page is at
+  const { isGeneratedPage } = usePageSource() //add to determine which page is at
 
   const t = useTranslations()
   const questionManipulationSchema = useValidationSchema()
@@ -73,8 +73,14 @@ function ElementEditModal({
   const [elementDataTypename, setElementDataTypename] =
     useState<ElementData['__typename']>('ChoicesElementData')
 
-  const { loading: loadingQuestion, data: dataQuestion , error} = useQuery(
-    isGeneratedPage? GetSingleGeneratedQuestionDocument : GetSingleQuestionDocument, //using different query at different page
+  const {
+    loading: loadingQuestion,
+    data: dataQuestion,
+    error,
+  } = useQuery(
+    isGeneratedPage
+      ? GetSingleGeneratedQuestionDocument
+      : GetSingleQuestionDocument, //using different query at different page
     {
       variables: { id: questionId! },
       skip: typeof questionId === 'undefined',
@@ -82,14 +88,14 @@ function ElementEditModal({
   )
 
   // adding console.log to debug
-  console.log("Is current page generated page:", isGeneratedPage);
-  console.log("what is the question ID now:", questionId);
-  console.log("show the data", dataQuestion);
-  console.log("check status - loading:", loadingQuestion, ", error:", error);
-  console.log("data structure:", dataQuestion?.generatedQuestion);
+  console.log('Is current page generated page:', isGeneratedPage)
+  console.log('what is the question ID now:', questionId)
+  console.log('show the data', dataQuestion)
+  console.log('check status - loading:', loadingQuestion, ', error:', error)
+  console.log('data structure:', dataQuestion?.generatedQuestion)
 
-  if(error){
-    console.error("Error fetching question:", error);
+  if (error) {
+    console.error('Error fetching question:', error)
   }
 
   const [manipulateContentElement] = useMutation(
@@ -111,7 +117,9 @@ function ElementEditModal({
 
   const initialValues = useElementFormInitialValues({
     mode,
-    question: isGeneratedPage ? dataQuestion?.generatedQuestion : dataQuestion?.question,
+    question: isGeneratedPage
+      ? dataQuestion?.generatedQuestion
+      : dataQuestion?.question,
     isDuplication,
   })
 
@@ -181,7 +189,7 @@ function ElementEditModal({
             const result = await manipulateChoicesQuestion({
               variables: args,
               refetchQueries: [
-                { query: GetUserQuestionsDocument},
+                { query: GetUserQuestionsDocument },
                 { query: GetUserTagsDocument },
               ],
             })
@@ -276,7 +284,11 @@ function ElementEditModal({
                 form="question-manipulation-form"
                 data={{ cy: 'save-new-question' }}
               >
-                <Button.Label>{t('shared.generic.save')}</Button.Label>
+                <Button.Label>
+                  {isGeneratedPage
+                    ? t('manage.aiRelate.saveToPool')
+                    : t('shared.generic.save')}
+                </Button.Label>
               </Button>
             }
             onSecondaryAction={
