@@ -230,6 +230,7 @@ export const Query = builder.queryType({
           limit: t.arg.int({ required: true }), // questions per page
           offset: t.arg.int({ required: true }), // offset
           difficultyFilter: t.arg.string({ required: false }), // difficulty filter
+          typeFilter: t.arg.string({ required: false }), // type filter
         },
         resolve(
           _: unknown,
@@ -237,7 +238,8 @@ export const Query = builder.queryType({
             limit,
             offset,
             difficultyFilter,
-          }: { limit: number; offset: number; difficultyFilter: string },
+            typeFilter,
+          }: { limit: number; offset: number; difficultyFilter: string; typeFilter: string },
           ctx
         ) {
           return QuestionService.getHistoryGeneratedQuestions(
@@ -246,6 +248,7 @@ export const Query = builder.queryType({
               limit,
               offset,
               difficultyFilter,
+              typeFilter,
             },
             ctx
           )

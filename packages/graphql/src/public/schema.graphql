@@ -1372,7 +1372,7 @@ type Query {
   groupActivity(id: String!): GroupActivity
   groupActivityDetails(activityId: String!, groupId: String!): GroupActivityDetails
   groupActivityInstances(courseId: String!, groupId: String!): [GroupActivityInstance!]
-  historyGeneratedQuestions(difficultyFilter: String, limit: Int!, offset: Int!): [Element!]
+  historyGeneratedQuestions(difficultyFilter: String, limit: Int!, offset: Int!, typeFilter: String): [Element!]
   latestNQuestions(limit: Int!): [Element!]
   liveSession(id: String!): Session
   microLearning(id: String!): MicroLearning

@@ -181,11 +181,13 @@ export async function getHistoryGeneratedQuestions(
     limit = 10,
     offset = 0,
     difficultyFilter,
+    typeFilter,
   }: {
     ownerId: string
     limit?: number
     offset?: number
     difficultyFilter?: string
+    typeFilter?: string
   },
   ctx: ContextWithUser
 ) {
@@ -193,6 +195,7 @@ export async function getHistoryGeneratedQuestions(
     where: {
       ownerId: ownerId,
       difficulty: difficultyFilter ? difficultyFilter : undefined, //Apply difficulty filter if provided
+      type: typeFilter ? typeFilter : undefined, // Apply type filter if provided
     },
     orderBy: {
       createdAt: 'desc',

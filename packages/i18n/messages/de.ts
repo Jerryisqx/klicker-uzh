@@ -792,6 +792,7 @@ Da die KlickerUZH-App noch nicht im iOS-App-Store verfügbar ist, folgen Sie die
       all: 'ALLE',
       page: 'Seite {currentPage} von {totalPages}',
       filterDifficulty: 'Fragen nach Schwierigkeitsgrad filtern',
+      filterType: "Nach Typ filtern",
       fileUpload: 'Laden Sie eine Datei zun Generieren hoch:',
       noFileSelected:
         'Keine Datei ausgewählt. Bitte wählen Sie eine Datei zum Hochladen.',
@@ -800,6 +801,8 @@ Da die KlickerUZH-App noch nicht im iOS-App-Store verfügbar ist, folgen Sie die
       selectModel:
         'Wählen Sie das Modell aus, mit dem Sie Antworten generieren möchten',
       fileSuccess: 'Dateiupload erfolgreich!',
+      
+      modelTooltip: "Wähle das Modell basierend auf deinem Inhalt. Claude 3.5 Sonnet eignet sich besser für die Generierung von präzisen, anspruchsvollen und konzeptionell tiefgehenden Fragen, während GPT-4o besser für klarere und mittelschwere Fragen geeignet ist.",
       fileFail: 'Dateiupload fehlgeschlagen, bitte versuchen Sie es erneut.',
       chooseType:
         'Wählen Sie die Art der Fragen, die Sie erstellen möchten, oder RANDOM, wenn Sie unsicher sind',

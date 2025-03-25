@@ -2,11 +2,13 @@ query GetHistoryGeneratedQuestions(
   $limit: Int!
   $offset: Int!
   $difficulty: String
+  $type: String
 ) {
   historyGeneratedQuestions(
     limit: $limit
     offset: $offset
     difficultyFilter: $difficulty
+    typeFilter: $type
   ) {
     __typename
 

@@ -794,11 +794,15 @@ Since the KlickerUZH app is not yet available on the iOS App Store, follow these
       all: 'ALL',
       page: 'Page {currentPage} of {totalPages}',
       filterDifficulty: 'Filter questions by difficulty level',
+      filterType: "Filter questions by Type",
       fileUpload: 'Upload a file for generating:',
       noFileSelected: 'No file selected. Please select a file to upload.',
       uploadFile: 'UPLOAD FILE',
       uploading: 'Uploading...',
       selectModel: 'Choose the model you want to generate qeustions with',
+
+      modelTooltip: "Choose the model based on your content. Claude 3.5 Sonnet is better for generating accurate, challenging, and conceptually deep questions, while GPT-4o is more suitable for clearer and medium-difficulty questions.",
+   
       fileSuccess: 'File upload success!',
       fileFail: 'File upload failed, please retry.',
       chooseType:

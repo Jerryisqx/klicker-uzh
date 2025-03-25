@@ -17,6 +17,8 @@ import { pickBy } from 'remeda'
 import { PageSourceProvider } from 'src/pageContext/PageContext'
 import Layout from '../../components/Layout'
 import QuestionList from '../../components/questions/QuestionList'
+//import '@fortawesome/fontawesome-free/css/all.min.css'
+
 
 export default function Home() {
   const t = useTranslations()
@@ -39,6 +41,7 @@ export default function Home() {
   const [numQuestions, setNumQuestions] = useState<string>()
   const [difficultyLevel, setDifficultyLevel] = useState<string>()
   const [difficultyFilter, setDifficultyFilter] = useState<string>('ALL')
+  const [typeFilter, setTypeFilter] = useState<string>('ALL') // type
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null)
   const [questionsGenerated, setQuestionsGenerated] = useState(false)
   const [questions, setQuestions] = useState<any[]>([])
@@ -83,6 +86,7 @@ export default function Home() {
       limit: itemsPerPage,
       offset: (currentPage - 1) * itemsPerPage,
       difficulty: difficultyFilter === 'ALL' ? undefined : difficultyFilter,
+      type: typeFilter === 'ALL' ? undefined : typeFilter,
     },
   })
 
@@ -91,8 +95,9 @@ export default function Home() {
       limit: itemsPerPage,
       offset: (currentPage - 1) * itemsPerPage,
       difficulty: difficultyFilter === 'ALL' ? undefined : difficultyFilter,
+      type: typeFilter === 'ALL' ? undefined : typeFilter,
     })
-  }, [difficultyFilter, currentPage, refetchHistoryQuestions])
+  }, [difficultyFilter, typeFilter, currentPage, refetchHistoryQuestions])
 
   const {
     loading: loadingCount,
@@ -433,15 +438,29 @@ export default function Home() {
               )}
             </div>
 
-            <div className="mb-6 space-y-4">
-              <div>
+            {/* <div className="mb-6 space-y-4"> */}
+              
+              {/* <div>
                 <Label
                   label={t('manage.aiRelate.selectModel')}
                   className={{
                     root: 'mb-2 block text-sm font-semibold text-gray-700',
                   }}
-                />
+                /> */}
 
+                      
+            <div className="mb-6 space-y-4"> 
+            <div>
+              <div className="mb-2 flex items-center text-sm font-semibold text-gray-700">
+                <span>{t('manage.aiRelate.selectModel')}</span>
+                <span
+                  className="ml-1 cursor-help text-blue-600"
+                  title={t('manage.aiRelate.modelTooltip')}
+                >
+                  {/* <i className="fas fa-question-circle"></i> */}
+                 ?
+                </span>
+              </div> 
                 <Select
                   items={[
                     {
@@ -696,7 +715,9 @@ export default function Home() {
             {activeTab === 'history' && (
               <>
                 {/* Difficulty filter dropdown */}
-                <div className="mb-4">
+                <div className="mb-4 flex gap-4"> 
+                {/* <div className="mb-4"> */}
+                 <div className="flex-1">
                   <Select
                     items={[
                       {
@@ -717,10 +738,30 @@ export default function Home() {
                     onChange={(newValue) => setDifficultyFilter(newValue)} // Update difficultyFilter state
                     className={{
                       trigger:
-                        'w-1/2 text-center text-gray-400 placeholder:text-gray-400',
+                        'w-full text-center text-gray-400 placeholder:text-gray-400',
                     }}
                   />
                 </div>
+
+                {/* type */}
+                <div className="flex-1">
+                  <Select
+                    items={[
+                      { label: t(`shared.${ElementType.Mc}.typeLabel`), value: ElementType.Mc },
+                      { label: t(`shared.${ElementType.Sc}.typeLabel`), value: ElementType.Sc },
+                      { label: t(`shared.${ElementType.FreeText}.typeLabel`), value: ElementType.FreeText },
+                      { label: t(`shared.${ElementType.Kprim}.typeLabel`), value: ElementType.Kprim },
+                      { label: t(`shared.${ElementType.Numerical}.typeLabel`), value: ElementType.Numerical },
+                      { label: t('manage.aiRelate.all'), value: 'ALL' },
+                    ]}
+                    placeholder={t('manage.aiRelate.filterType')}
+                    onChange={(newValue) => setTypeFilter(newValue)}
+                    className={{
+                      trigger: 'w-full text-center text-gray-400 placeholder:text-gray-400',
+                    }}
+                  />
+                 </div>
+                </div> 
 
                 {/* Render Questions */}
                 {loadingHistory ? (
