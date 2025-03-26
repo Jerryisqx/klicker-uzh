@@ -12,7 +12,7 @@ This folder contains all the materials and scripts used for analyzing interview 
 | `RateDataResult_analysis.ipynb` |  Jupyter notebook focused on analyzing evaluation data based on interviewees’ ratings across five key dimensions: **Difficulty Matching**, **Type Appropriateness**, **Relevance**, **Factual Correctness**, and **Ambiguity**. These dimensions are defined in the evaluation framework and assessed on a 5-point Likert scale. |
 | `test-an.Rmd`               | R Markdown file that analyzes the raw rating data in `test1.csv`, including visualizations and statistical summaries across the five evaluation dimensions.|
 | `test1.csv`                 | The original raw rating file, containing interviewees’ evaluation scores across five dimensions defined in the evaluation framework. Used as input for analysis in `RateDataResult_analysis.ipynb` and `test-an.Rmd`.|
-
+| `Keywords_Word_Cloud.ipynb`      | This file analyzes user interview transcripts to extract and visualize the most frequent positive and negative feedback keywords using frequency tables and word clouds.|
 
 ## 📌 Notes
 
@@ -26,6 +26,7 @@ This folder contains all the materials and scripts used for analyzing interview 
 3. Explore model performance using `model compare.xlsx`.
 4. Use `RateDataResult_analysis.ipynb` or `test-an.Rmd` to analyze evaluation data based on the five-dimension framework.
 5. `test1.csv` is the shared data source used in both analysis scripts.
+6. Run `Keywords_Word_Cloud.ipynb` to automatically extract, count, and visualize the most frequent positive and negative feedback keywords from multiple interview transcripts.
 
 ---
 
