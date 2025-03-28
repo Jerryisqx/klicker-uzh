@@ -75,8 +75,9 @@ class Base(BaseModel):
     difficulty: str
     field: str
     question: str = Field(..., alias="content")
+
     class Config:
-        populate_by_name = True 
+        populate_by_name = True
 
     @field_validator("type", "difficulty", "field", "question", mode="before")
     @staticmethod
@@ -108,7 +109,7 @@ def parse_question(generated_text, num):
     # context= context.replace("\n", "\\n").replace("\r", "\\r")
     parts = re.split(r"\n\s*\n", context)
     if len(parts) >= num + 1:
-        parts = parts[len(parts) - num :]
+        parts = parts[len(parts) - num:]
     questions = []
     for part in parts:
         current_question = {}
@@ -125,7 +126,9 @@ def parse_question(generated_text, num):
             current_question["type"] = base_data["type"]
             current_question["difficulty"] = base_data["difficulty"].upper()
             current_question["name"] = base_data["field"]
-            current_question["question"] = base_data.get("content") or base_data.get("question")
+            current_question["question"] = base_data.get("content") or base_data.get(
+                "question"
+            )
             current_question["options"] = back_part
             questions.append(current_question)
         except ValidationError as e:

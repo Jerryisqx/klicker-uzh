@@ -1,11 +1,7 @@
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
-from pydantic import BaseModel, Field
-from typing import List, Literal
-import random
+from pydantic import BaseModel
 import logging
-import re
 import os
 import json
 import uuid
@@ -14,9 +10,6 @@ from io import BytesIO
 from datetime import datetime
 from agent_haystack import Agent_stage1, Agent_stage2, DocumentStore, Converter
 from prisma import Prisma
-import asyncio
-from datetime import timedelta
-import hashlib
 import base64
 import traceback
 from parse_questions import parse_question
@@ -63,50 +56,6 @@ class GenerateQuestionsRequest(BaseModel):
     type: str
     difficulty: str
     model: str
-
-    # @field_validator("language")
-    # def validate_language(cls, value):
-    #     allowed_languages = {"English", "German"}
-    #     if value not in allowed_languages:
-    #         raise ValueError(
-    #             f"Invalid Languages: {value}, Language must be one of {allowed_languages}"
-    #         )
-    #     return value
-
-    # @field_validator("type")
-    # def validate_type(cls, value):
-    #     allowed_types = {
-    #         "Single Choice",
-    #         "Multiple Choices",
-    #         "Numerical",
-    #         "Free Text",
-    #         "Kprim",
-    #         "Flashcard",
-    #         "Content",
-    #     }
-    #     if value not in allowed_types:
-    #         raise ValueError(
-    #             f"Invalid Types: {value}, Type must be one of {allowed_types}"
-    #         )
-    #     return value
-
-    # @field_validator("difficulty")
-    # def validate_difficulty(cls, value):
-    #     allowed_difficulties = {"EASY", "MEDIUM", "HARD"}
-    #     if value not in allowed_difficulties:
-    #         raise ValueError(
-    #             f"Invalid Difficulty: {value}, Difficulty must be one of {allowed_difficulties}"
-    #         )
-    #     return value
-
-    # @field_validator("model")
-    # def validate_model(cls, value):
-    #     allowed_models = {"OpenAI", "Claude", "Gemini", "Llama"}
-    #     if value not in allowed_models:
-    #         raise ValueError(
-    #             f"Invalid Model: {value}, Model must be one of {allowed_models}"
-    #         )
-    #     return value
 
 
 class FileUploadRequest(BaseModel):
@@ -191,13 +140,6 @@ async def generate_questions(request: GenerateQuestionsRequest):
     )
 
     logging.info("Starting the question generation process...")
-
-    # prompt_path1 = os.path.join(os.getcwd(), "stage1.txt")
-    # prompt_path2 = os.path.join(os.getcwd(), "stage2.txt")
-    # with open(prompt_path1, "r", encoding="utf-8") as file:
-    #     stage1 = file.read()
-    # with open(prompt_path2, "r", encoding="utf-8") as file:
-    #     stage2 = file.read()
 
     MAX_RETRIES = 3
     retry_count = 0
@@ -373,16 +315,6 @@ async def upload_pdf(request: FileUploadRequest):
             chunk_id = ids[0]
             logging.info(f"Document conversion completed. Document ID: {chunk_id}")
 
-            # Verify stored document
-    #         try:
-    #             documents = list(document_store.get_all_documents_generator())  # Convert generator to list
-    # # Find the document with the matching ID
-    #             sample_doc = next((doc for doc in documents if doc.id == chunk_id), None)
-    #             logging.info(f"Sample document preview: {str(sample_doc)[:200]}...")
-    #         except Exception as e:
-    #             logging.error(f"Error retrieving document sample: {str(e)}")
-    #             return {"message": "Document processing failed: Unable to retrieve document."}
-
             # Update Redis cache
             logging.info("Updating Redis cache...")
             upload_pipe = redis_cache.pipeline()
@@ -395,9 +327,13 @@ async def upload_pdf(request: FileUploadRequest):
             # Verify Redis data
             logging.info("Verifying Redis data after upload:")
             logging.info(f"filename exists: {redis_cache.exists('filename')}")
-            logging.info(f"document_store exists: {redis_cache.exists('document_store')}")
+            logging.info(
+                f"document_store exists: {redis_cache.exists('document_store')}"
+            )
             logging.info(f"agent_status exists: {redis_cache.exists('agent_status')}")
-            logging.info(f"Stored document_id: {redis_cache.get('document_id').decode('utf-8')}")
+            logging.info(
+                f"Stored document_id: {redis_cache.get('document_id').decode('utf-8')}"
+            )
 
             logging.info("Upload successful.")
             return {"message": "Upload successful."}
@@ -408,7 +344,6 @@ async def upload_pdf(request: FileUploadRequest):
     except Exception as e:
         logging.error(f"Unexpected error: {str(e)}")
         return {"message": "Upload failed: An unexpected error occurred."}
-
 
 
 @app.on_event("startup")

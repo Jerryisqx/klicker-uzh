@@ -34,7 +34,7 @@ services:
       - klicker
 
   ai:
-    image: ghcr.io/jerryisqx/klicker-uzh/ai-arm:v3-ai-dev
+    image: ghcr.io/jerryisqx/klicker-uzh/ai:v3-ai-dev
     # qingyuleo/test:v1.0.0
     # ghcr.io/jerryisqx/klicker-uzh/ai:v3-ai-dev
     # container_name: ai

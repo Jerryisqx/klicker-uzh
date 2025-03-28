@@ -1,73 +1,33 @@
 # # Galaxy
 # # time：2024/9/15 11:43
-
 import logging
 import os
 import hashlib
 import time
 import threading
-
-# API and KEY set
-import subprocess
 import re
 import json
 import redis
-
-# from litellm import completion
-# from litellm import LiteLLM
-from haystack import component
-
-# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-# ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-# LLAMA_API_KEY= os.getenv("LLAMA_API_KEY")
-# GIMINI_APT_KEY=os.getenv("GIMINI_APT_KEY")
-
-# os.environ["LANGFUSE_PUBLIC_KEY"] = ""
-# os.environ["LANGFUSE_SECRET_KEY"] = ""
-os.environ["LANGFUSE_HOST"] = "https://cloud.langfuse.com"  # 🇪🇺 EU region
-
-# Enable Haystack content tracing
-os.environ["HAYSTACK_CONTENT_TRACING_ENABLED"] = "True"
-
-from pathlib import Path
-from getpass import getpass
-import threading
-import hashlib
 import pypdf  # PyMuPDF
 import docx
 import pptx
 import io
 from io import BytesIO
-from haystack import Document
 from haystack import Pipeline, Document
 from haystack.document_stores.in_memory import InMemoryDocumentStore
 from haystack.document_stores.types import DuplicatePolicy
-from haystack.components.converters import PyPDFToDocument
-from haystack.components.routers import FileTypeRouter
-from haystack.components.preprocessors import DocumentSplitter, DocumentCleaner
-from haystack.components.writers import DocumentWriter
-from haystack.components.joiners import DocumentJoiner
-from haystack.components.embedders import (
-    SentenceTransformersDocumentEmbedder,
-    SentenceTransformersTextEmbedder,
-)
-from haystack.components.generators import OpenAIGenerator, HuggingFaceAPIGenerator
-from haystack.components.retrievers.in_memory import (
-    InMemoryEmbeddingRetriever,
-    InMemoryBM25Retriever,
-)
+from haystack.components.generators import OpenAIGenerator
+from haystack.components.retrievers.in_memory import InMemoryBM25Retriever
 from haystack.components.builders import PromptBuilder, AnswerBuilder
 from haystack_integrations.components.connectors.langfuse import LangfuseConnector
 from haystack_integrations.components.generators.anthropic import AnthropicGenerator
-from haystack_integrations.components.generators.google_ai import (
-    GoogleAIGeminiGenerator,
-)
+# API and KEY set
 
-# from haystack_experimental.chat_message_stores.in_memory import InMemoryChatMessageStore
-# from haystack_experimental.components.retrievers import ChatMessageRetriever
-# from haystack_experimental.components.writers import ChatMessageWriter
 
-# redis_cache = redis.Redis(host="redis_cache", port=6379, db=0)
+os.environ["LANGFUSE_HOST"] = "https://cloud.langfuse.com"  # 🇪🇺 EU region
+
+# Enable Haystack content tracing
+os.environ["HAYSTACK_CONTENT_TRACING_ENABLED"] = "True"
 redis_cache_host = os.getenv("REDIS_CACHE_HOST")
 redis_cache_port = int(os.getenv("REDIS_CACHE_PORT"))
 redis_cache_pass = os.getenv("REDIS_CACHE_PASS")
@@ -160,7 +120,7 @@ class Converter:
         text = ""
         if isinstance(self.buf, io.BytesIO):
             self.buf = self.buf.getvalue()
-        
+
         reader = pypdf.PdfReader(BytesIO(self.buf))
         for page in reader.pages:
             text += page.extract_text() + "\n"
@@ -188,7 +148,7 @@ def extract_questions(context, num, generated_content):
     #     print(context)
     parts = re.split(r"\n\s*\n", context)
     if len(parts) >= num + 1:
-        parts = parts[len(parts) - num :]
+        parts = parts[len(parts) - num:]
 
     for part in parts:
         base_part = part.split("Back:")[0].strip()
@@ -201,17 +161,7 @@ def extract_questions(context, num, generated_content):
 
 class Agent_stage1:
     def __init__(self, template):
-        # Openai API Key
-        # self.api_key = os.environ["OPENAI_API_KEY"]
-        # elif model=='Llama':
-        #     self.api_key = os.getenv("LLAMA_API_KEY")
-        #     self.generator = HuggingFaceAPIGenerator(api_type="text_generation_inference", api_params={"model_name": "meta-llama/Meta-Llama-3-8B"})
-        # else:
-        #     self.api_key = os.getenv("TOGETHER_API_KEY")
-        #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
-        # self.text_embedder = SentenceTransformersTextEmbedder(
-        #     model="sentence-transformers/all-MiniLM-L6-v2"
-        # )
+
         self.template = template
 
     def init(self, filename, model):
@@ -248,7 +198,10 @@ class Agent_stage1:
         self.rag_pipeline.connect("retriever", "answer_builder.documents")
 
     def run_agent(self):
-        question = f"Please generate key points and all related original context according to the input document."
+        question = (
+            "Please generate key points and all related original context "
+            "according to the input document."
+        )
         generation_kwargs = {"max_tokens": 4096}
         response = self.rag_pipeline.run(
             {
@@ -267,6 +220,7 @@ class Agent_stage2:
         # self.api_key = os.environ["OPENAI_API_KEY"]
 
         self.template = template
+        self.generated_content = ""
         # Memory components
         # self.memory_store = InMemoryChatMessageStore()
         # self.memory_retriever = ChatMessageRetriever(memory_store)
@@ -294,14 +248,7 @@ class Agent_stage2:
         else:
             self.api_key = os.getenv("ANTHROPIC_API_KEY")
             self.generator = AnthropicGenerator(model="claude-3-5-sonnet-20241022")
-        # elif model=='Llama':
-        #     self.api_key = os.getenv("LLAMA_API_KEY")
-        #     self.generator = HuggingFaceAPIGenerator(api_type="text_generation_inference", api_params={"model_name": "meta-llama/Meta-Llama-3-8B"})
-        # else:
-        #     self.api_key = os.getenv("TOGETHER_API_KEY")
-        #     self.generator = GoogleAIGeminiGenerator(model="gemma-2-9b-it")
         self.tracer = LangfuseConnector("Basic RAG Pipeline")
-        self.generated_content = ""
         self.prompt_builder = PromptBuilder(template=self.template)
         self.answer_builder = AnswerBuilder()
 
@@ -320,7 +267,11 @@ class Agent_stage2:
         self.rag_pipeline.connect("retriever", "answer_builder.documents")
 
     def run_agent(self, question_number, language, difficulty_level, question_type):
-        question = f"Please generate {question_number} {question_type} questions, the difficulty of the questions is {difficulty_level}, and the question language is {language}."
+        question = (
+            f"Please generate {question_number} {question_type} questions, "
+            f"with {difficulty_level} difficulty, "
+            f"in {language} language."
+        )
         generation_kwargs = {"max_tokens": 4096}
         response = self.rag_pipeline.run(
             {
